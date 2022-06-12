@@ -1,0 +1,114 @@
+name: tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python 3.6
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.6
+
+    - name: Install flow and sumo dependencies and binaries.
+      run: |
+        pushd $HOME
+        git clone https://github.com/flow-project/flow
+        pushd flow
+        git checkout aboudy-tmp  # keeping until model-v3 features are added
+        pip install --use-deprecated=legacy-resolver -e .
+        ./scripts/setup_sumo_ubuntu1804.sh
+        source ~/.bashrc
+        popd
+        popd
+
+    - name: Install MuJoCo.
+      run: |
+        sudo apt install libosmesa6-dev libgl1-mesa-glx libglfw3
+        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/.mujoco/mjpro150/bin"
+        mkdir $HOME/.mujoco
+        unzip docs/ci/mjpro150_linux.zip && mv mjpro150 $HOME/.mujoco
+        cp docs/ci/mjkey.txt $HOME/.mujoco/mjkey.txt
+        pip install cffi
+        pip install Cython
+        pip install lockfile
+        pip install mujoco-py==1.50.1.68
+
+    - name: Install AntGather.
+      run: |
+        pip install pyopengl
+        pip install theano
+        pip install mako
+        pushd $HOME
+        git clone https://github.com/rll/rllab.git
+        pushd rllab
+        python setup.py develop
+        git submodule add -f https://github.com/florensacc/snn4hrl.git sandbox/snn4hrl
+        popd
+        popd
+        unzip docs/ci/mjpro131_linux.zip && mv mjpro131 $HOME/.mujoco
+        mkdir -p $HOME/rllab/vendor/mujoco
+        mkdir -p $HOME/rllab/vendor/mujoco_models
+        cp docs/ci/rllab/snake.xml $HOME/rllab/vendor/mujoco_models/snake.xml
+        cp docs/ci/rllab/ant.xml $HOME/rllab/vendor/mujoco_models/ant.xml
+        ln -s $HOME/.mujoco/mjpro131/bin/libglfw.so.3 $HOME/rllab/vendor/mujoco/.
+        ln -s $HOME/.mujoco/mjpro131/bin/libmujoco131.so $HOME/rllab/vendor/mujoco/.
+        ln -s $HOME/.mujoco/mjkey.txt $HOME/rllab/vendor/mujoco/.
+
+    - name: Install multi-world.
+      run: |
+        pushd $HOME
+        git clone https://github.com/vitchyr/multiworld.git
+        pushd multiworld
+        pip install -e .
+        popd
+        popd
+
+    - name: Other packages to install.
+      run: |
+        pip install flake8
+        pip install coveralls
+        pip install nose2
+        pip install pydocstyle
+
+    - name: Analysing the code with pylint.
+      run: |
+        flake8 --show-source
+        pydocstyle . --convention=numpy
+
+    - name: Run tests.
+      run: |
+        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/.mujoco/mjpro150/bin"
+        export PATH="$HOME/sumo_binaries/bin:$PATH"
+        export SUMO_HOME="$HOME/sumo_binaries/bin"
+        pip install --use-deprecated=legacy-resolver -e .
+        nose2 --with-coverage
+
+    - name: Upload coverage data to coveralls.io
+      run: coveralls --service=github
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        COVERALLS_FLAG_NAME: ${{ matrix.test-name }}
+        COVERALLS_PARALLEL: true
+
+  coveralls:
+    name: Indicate completion to coveralls.io.
+    needs: build
+    runs-on: ubuntu-latest
+    container: python:3-slim
+    steps:
+    - name: Finished
+      run: |
+        pip3 install --upgrade coveralls
+        coveralls --finish
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

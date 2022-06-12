@@ -1,0 +1,15 @@
+[report]
+omit =
+    */python?.?/*
+    */site-packages/nose/*
+    *__init__*
+    */setup.py
+    */hbaselines/envs/deeploco/envs.py
+    */config-3.py
+    */config.py
+
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise NotImplementedError
+    def plot_trajectory*
