@@ -33,7 +33,7 @@ class RecurrentDQNAgent:
         self.schedule = LinearSchedule(num_episodes, self.epsilon_min)
 
         self.trace_length = 7
-        self.model = RecurrentDQN(input_shape=self.env.observation_space.shape, output_shape=self.env.action_space.n, n_neurons=32)
+        self.model = RecurrentDQN(input_shape=self.env.observation_space.shape, output_shape=3, n_neurons=32)
 
         self.mode = 'train'
 

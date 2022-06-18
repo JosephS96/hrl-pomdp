@@ -7,7 +7,7 @@ def set_up():
 
     parser.add_argument(
         '--show',
-        default=False,
+        default=True,
         action='store_true',
         help='At what point to render the cart environment'
     )
@@ -15,7 +15,7 @@ def set_up():
 
     parser.add_argument(
         '--retrain',
-        default=False,
+        default=True,
         action='store_true',
         help='Whether to start training from scratch again or not'
     )

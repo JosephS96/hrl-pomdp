@@ -69,13 +69,11 @@ class DQN:
         self.model.fit(state_batch, target_q_value, batch_size=batch_size, epochs=1, verbose=0)
 
 
-"""
-Double Deep Q Network, features a target network to make the overall training more stable
-TODO: Check performance and if implementation is actually correct
-"""
-
-
 class DoubleDQN():
+    """
+    Double Deep Q Network, features a target network to make the overall training more stable
+    TODO: Check performance and if implementation is actually correct
+    """
     def __init__(self, input_shape, output_shape, n_neurons=64, activation='linear'):
         self.input_shape = input_shape
         self.output_shape = output_shape
@@ -225,33 +223,6 @@ class RecurrentDQN():
             Dense(self.output_shape, activation=self.activation)
         ])
 
-
-        """
-        # input shape, image from 44 x 44 x 3
-        inputs = Input(shape=self.input_shape)
-        flatten = Flatten()(inputs)
-
-        convInput = Reshape(target_shape=(-1, 44, 44, 3))(flatten)
-
-        conv1 = Conv2D(filters=32 , kernel_size=(3,3), strides=(4,4))(convInput)
-        conv2 = Conv2D(filters=32 , kernel_size=(3,3), strides=(2,2))(conv1)
-        conv3 = Conv2D(filters=32 , kernel_size=(3,3), strides=(1,1))(conv2)
-        conv4 = Conv2D(filters=self.hidden_units , kernel_size=(3,3), strides=(1,1))(conv3)
-
-        # reshape convolution output to [batch, trace, hidden_units]
-        convFlat = Flatten()(conv4)
-        convToRnn = Reshape(target_shape=(self.trace_length, self.hidden_units))(convFlat)
-
-        # convFlat = Reshape(Flatten(conv4), target_shape=(self.trace_length, self.hidden_units))
-
-        rnn = LSTM(self.hidden_units)(convToRnn)
-        rnn = tf.reshape(rnn, shape=(-1, self.hidden_units))
-
-        output = Dense(self.output_shape)(rnn)
-        """
-
-        # model = Model(inputs, output)
-
         model.compile(loss='mse', optimizer='adam')
         model.summary()
 
@@ -306,6 +277,93 @@ class RecurrentDQN():
         # Train the model
         self.model.fit(state_batch, target_q_value, batch_size=batch_size, epochs=1, verbose=0)
 
+class RecurrentDDQN():
+    """"
+    Recurrent Double Deep Q learning
+    """""
+    def __init__(self, input_shape, output_shape, n_neurons=64, activation='linear', hidden_units=224, trace_n=7):
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+        self.n_neurons = n_neurons
+        self.activation = activation
+        self.hidden_units = hidden_units
+        self.trace_length=trace_n
+
+        self.model = self.__create_model()
+        self.target = self.__create_model()
+
+        self.update_target_network()
+
+    def __create_model(self):
+
+        model = Sequential([
+            InputLayer(input_shape=self.input_shape),
+            Dense(64, activation='relu'),
+            Dense(32, activation='relu'),
+            Flatten(),
+            # Dense(256, activation='relu'),
+            Reshape(target_shape=(self.trace_length, self.hidden_units)),
+            # LSTM input: [batch, timesteps, feature]
+            LSTM(units=self.hidden_units),  # RNN layer should help at memorizing stuff from the environment
+            Dense(self.output_shape, activation=self.activation)
+        ])
+
+        model.compile(loss='mse', optimizer='adam')
+        model.summary()
+
+        return model
+
+    def init_hidden_state(self):
+        pass
+
+    def update_target_network(self):
+        self.target.set_weights(self.model.get_weights())
+
+    def predict(self, state):
+        state = np.expand_dims(state, axis=0)
+        output = self.model(state)[0].numpy()
+
+        return output
+
+    def update_params(self, batch_memory, gamma):
+        """
+        batch_memory: tuple of shape (state, action, reward, next_state, done)
+        batch_size: size of the batch memory tuple
+        gamma: discount value for the future Q-values
+        """
+        state_batch = []
+        action_batch = []
+        reward_batch = []
+        next_state_batch = []
+        done_batch = []
+        for episode in batch_memory:
+            state_batch.append(episode[0])
+            action_batch.append(episode[1])
+            reward_batch.append(episode[2])
+            next_state_batch.append(episode[3])
+            done_batch.append(episode[4])
+
+        state_batch = np.array(state_batch)
+        action_batch = np.array(action_batch)
+        reward_batch = np.array(reward_batch)
+        next_state_batch = np.array(next_state_batch)
+        done_batch = np.array(done_batch)
+        # state_batch, action_batch, reward_batch, next_state_batch, done_batch = batch_memory
+
+        batch_size = len(state_batch)  # Getting batch_size
+
+        target_q_value = self.model.predict(state_batch)  # Current state
+        q_value = self.target.predict(next_state_batch)  # Next state
+
+        for index in range(batch_size):
+            if done_batch[index]:
+                target_q_value[index][action_batch[index]] = reward_batch[index]
+            else:
+                target_q_value[index][action_batch[index]] = reward_batch[index] + gamma * (
+                    np.amax(q_value[index]))
+
+        # Train the model
+        self.model.fit(state_batch, target_q_value, batch_size=batch_size, epochs=1, verbose=0)
 
 class RecurrentDuelingDQN():
     def __init__(self):

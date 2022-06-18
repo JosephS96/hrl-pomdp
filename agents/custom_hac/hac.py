@@ -5,14 +5,15 @@ import gym_minigrid
 from gym_minigrid.wrappers import ImgObsWrapper
 
 
-class HAC():
+class HAC:
     def __init__(self,
                  env,
                  num_episodes,
                  n_layers=2,
                  max_subgoal_steps=10,
                  goal_pos=(15,15),
-                 subgoal_testing_freq = 0.6,
+                 subgoal_testing_freq=0.6,
+                 subgoals=[],
                  render=True
                 ):
 
@@ -23,6 +24,9 @@ class HAC():
         self.goal_pos = goal_pos
         self.max_subgoal_steps = max_subgoal_steps
         self.num_updates = 10
+
+        self.subgoals = subgoals
+        self.subgoals.append(goal_pos)
 
         # Final goal to achieve
         self.agent_pos = (1, 1)
@@ -36,10 +40,10 @@ class HAC():
         hierarchies = []
         for level in range(self.n_layers):
             if level == 0:
-                primitive = Layer(self.env.observation_space.shape, self.env.action_space.n, level=level)
+                primitive = Layer(self.env.observation_space.shape, 3, level=level)
                 hierarchies.append(primitive)
             else:
-                layer = Layer(self.env.observation_space.shape, 2, level)
+                layer = Layer(self.env.observation_space.shape, len(self.subgoals), level)
                 hierarchies.append(layer)
 
         return hierarchies
@@ -75,5 +79,5 @@ if __name__ == "__main__":
     env = gym.make('MiniGrid-Empty-16x16-v0')
     env = ImgObsWrapper(env)
 
-    agent = HAC(env, num_episodes=10, n_layers=2, max_subgoal_steps=10, goal_pos=(1, 1), subgoal_testing_freq=0.6, render=False)
+    agent = HAC(env, num_episodes=10, n_layers=2, max_subgoal_steps=10, goal_pos=(14, 14), subgoal_testing_freq=0.6, render=False)
     agent.learn()

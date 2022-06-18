@@ -2,6 +2,7 @@ import random
 
 import numpy as np
 
+from networks.dqn import DQN
 from replay_buffer import ExperienceBuffer
 
 from tensorflow.python.keras.models import Sequential
@@ -9,14 +10,18 @@ from tensorflow.python.keras.layers import Dense, InputLayer, Flatten
 
 
 class Layer:
-    def __init__(self, input_dim, output_dim, level):
+    def __init__(self, input_dim, output_dim, level, subgoals=None):
 
         self.level = level   # Each layer needs to be aware of its own level
         self.max_subgoal_steps = 10
-        self.model = self.__create_model(input_dim, output_dim)
+        # self.model = self.__create_model(input_dim, output_dim)
+        self.model = DQN(input_shape=input_dim, output_shape=output_dim)
         self.replay_buffer = ExperienceBuffer(size=3000)
         self.batch_size = 64
         self.gamma = 0.95
+
+        # Only sent this if layer > 0
+        self.subgoals = subgoals
 
     def __create_model(self, input_dim, output_dim):
         model = Sequential()
@@ -63,10 +68,12 @@ class Layer:
 
     def get_random_subgoal(self):
         # TODO: Only return reasonable subgoals that are not overlapping
-        x = random.randint(1, 15)
-        y = random.randint(1, 15)
+        # x = random.randint(1, 15)
+        # y = random.randint(1, 15)
 
-        return (x, y)
+        goal = random.choice(self.subgoals)
+
+        return goal
 
     def choose_subgoal(self, state, goal):
         state = np.expand_dims(state, axis=0)

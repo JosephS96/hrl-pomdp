@@ -3,28 +3,26 @@ import numpy as np
 import random
 import time
 import gym
-from gym_minigrid.wrappers import ImgObsWrapper, FullyObsWrapper
+from gym_minigrid.wrappers import ImgObsWrapper
 
-from replay_buffer import ReplayBuffer
+from replay_buffer import ReplayBuffer, EpisodeReplayBuffer
 from common.schedules import LinearSchedule
-from networks.dqn import DoubleDQN
-from envs.staticfourrooms import StaticFourRoomsEnv
-from envs.randomempty import RandomEmpyEnv
+from networks.dqn import RecurrentDDQN
 
 
-class DoubleDQNAgent:
+class RecurrentDDQNAgent:
     def __init__(self, env, num_episodes=200, render=False):
 
-        self.identifier = 'double-dqn'
+        self.identifier = 'recurrent-ddqn'
         self.env = env
         self.num_episodes = num_episodes
         self.render = render
 
         # Replay Buffer
-        self.buffer_size = 10000
-        self.min_size_batch = 3000
-        self.replay_buffer = ReplayBuffer(self.buffer_size)
-        self.batch_size = 32
+        self.buffer_size = 100
+        self.min_size_batch = 10 # 32
+        self.replay_buffer = EpisodeReplayBuffer(self.buffer_size)
+        self.batch_size = 4 # 32  Batch = batch_size * trace_length
         # self.her = False
 
         # Hyper-parameters
@@ -34,9 +32,11 @@ class DoubleDQNAgent:
         self.epsilon_min = 0.1
         self.schedule = LinearSchedule(num_episodes, self.epsilon_min)
 
+        self.trace_length = 7
+        self.model = RecurrentDDQN(input_shape=self.env.observation_space.shape, output_shape=3, n_neurons=32)
+
         # Steps to give before updating target model nn
         self.target_update_steps = 2000
-        self.model = DoubleDQN(input_shape=self.env.observation_space.shape, output_shape=3, n_neurons=32)
 
         self.mode = 'train'
 
@@ -60,13 +60,15 @@ class DoubleDQNAgent:
             # return self.env.action_space.sample()
 
     def learn(self):
-
-        update_nn_steps = 0
+        start_training_time = time.time()
         reward_per_episode = []
         success_rate_history = []
         n_success = 0
+        update_nn_steps = 0
 
         for episode in range(self.num_episodes):
+            episode_buffer = []
+
             episode_time_start = time.time()
             state = self.env.reset()
             done = False
@@ -87,15 +89,20 @@ class DoubleDQNAgent:
                 episode_reward += reward
                 action_history.append(action)
 
+                # If goal was not achieved, penalize
+                if reward == 0:
+                    reward = -0.01
+
                 # Save transitions into memory
-                self.replay_buffer.add(state, action, reward, state_next, done)
+                # self.replay_buffer.add(state, action, reward, state_next, done)
+                episode_buffer.append(np.reshape(np.array([state, action, reward, state_next, done]), newshape=(1, 5)))
 
                 state = state_next
                 prev_agent_pos = agent_pos
                 t += 1
 
                 if self.replay_buffer.__len__() > self.min_size_batch:
-                    batch_memory = self.replay_buffer.sample(self.batch_size)
+                    batch_memory = self.replay_buffer.sample(self.batch_size, self.trace_length)
                     self.model.update_params(batch_memory, self.gamma)
                     self.epsilon = self.schedule.value(episode)  # Anneal epsilon
 
@@ -114,6 +121,10 @@ class DoubleDQNAgent:
             reward_per_episode.append(episode_reward)
             success_rate_history.append(n_success / (episode + 1))
 
+            bufferArray = np.array(episode_buffer)
+            episode_buffer = list(zip(bufferArray))
+            self.replay_buffer.add(episode_buffer)
+
             # print stuff for logging - End of Episode -
             print(
                 f'Episode: {episode}, Reward: {episode_reward}, Epsilon: {self.epsilon}, Memory length: {self.replay_buffer.__len__()}, Episode length: {t}')
@@ -127,17 +138,12 @@ class DoubleDQNAgent:
 
 if __name__ == "__main__":
     PATH = "/Users/josesanchez/Documents/IAS/Thesis-Results"
-    # env_name = 'MiniGrid-Empty-16x16-v0'
-    #env = gym.make(env_name)
-
-    env_name = 'RandomMiniGrid-11x11'
-    # env = StaticFourRoomsEnv(grid_size=13, max_steps=500)
-    env = RandomEmpyEnv(grid_size=11, max_steps=80)
+    env_name = 'MiniGrid-Empty-16x16-v0'
+    env = gym.make(env_name)
     # env = gym.make('MiniGrid-FourRooms-v0', agent_pos=(5, 5), goal_pos=(13, 13))
-    # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
-    agent = DoubleDQNAgent(env=env, num_episodes=200, render=True)
+    agent = RecurrentDDQNAgent(env=env, num_episodes=200, render=False)
     rewards, success = agent.learn()
 
     results = {}

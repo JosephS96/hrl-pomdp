@@ -11,8 +11,7 @@ if __name__ == "__main__":
 
     # file_path = f"{BASE_PATH}/{env_name}/{agent_name}-{time.time()}.npy"
 
-    # file_path = "/Users/josesanchez/Documents/IAS/Thesis-Results/MiniGrid-Empty-16x16-v0/double-dqn-1654899538.0038881.npy"
-    file_path = "/Users/josesanchez/Documents/IAS/Thesis-Results/MiniGrid-Empty-16x16-v0/dqn-1654912237.9206982.npy"
+    file_path = "/Users/josesanchez/Documents/IAS/Thesis-Results/RandomMiniGrid-11x11/hierarchical-ddqn-1655562247.909178.npy"
     values = np.load(file_path, allow_pickle=True)
 
     plt.figure(figsize=(15, 8))
