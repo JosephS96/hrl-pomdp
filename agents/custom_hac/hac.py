@@ -2,7 +2,7 @@ from agents.custom_hac.layer import Layer
 
 import gym
 import gym_minigrid
-from gym_minigrid.wrappers import ImgObsWrapper
+from gym_minigrid.wrappers import ImgObsWrapper, FullyObsWrapper
 
 
 class HAC:
@@ -40,10 +40,10 @@ class HAC:
         hierarchies = []
         for level in range(self.n_layers):
             if level == 0:
-                primitive = Layer(self.env.observation_space.shape, 3, level=level)
+                primitive = Layer(self.env.observation_space.shape, 3, level=level, subgoals=self.subgoals)
                 hierarchies.append(primitive)
             else:
-                layer = Layer(self.env.observation_space.shape, len(self.subgoals), level)
+                layer = Layer(self.env.observation_space.shape, len(self.subgoals), level, subgoals=self.subgoals)
                 hierarchies.append(layer)
 
         return hierarchies
@@ -51,13 +51,15 @@ class HAC:
     # Update all NN for each layer
     def update_params(self):
         for i in range(self.n_layers):
-            self.layers[i].update_params(self.num_updates)
+            self.layers[i].update_params()
 
     def learn(self):
 
         for episode in range(self.num_episodes):
+            print(f" === Episode {episode} ===")
+
             # Select final goal from final goal space
-            goal = self.goal_pos
+            goal = self.subgoals.index(self.goal_pos)
 
             # Get initial state from environment
             state = self.env.reset()
@@ -65,7 +67,7 @@ class HAC:
             # Reset steps counter
 
             # Train for an episode
-            next_state, done = self.layers[self.n_layers-1].learn(self.n_layers-1, state, goal, self)
+            next_state, done, agent_pos = self.layers[self.n_layers-1].learn(self.n_layers-1, state, goal, self)
 
             # Update all networks layers
             self.update_params()
@@ -76,8 +78,28 @@ class HAC:
 if __name__ == "__main__":
     print("Custom HAC")
 
-    env = gym.make('MiniGrid-Empty-16x16-v0')
+    PATH = "/Users/josesanchez/Documents/IAS/Thesis-Results"
+    env_name = 'RandomMiniGrid-11x11'
+    # env = RandomEmpyEnv(grid_size=11, max_steps=80, goal_pos=(9,9), agent_pos=(1, 1))
+    # env = gym.make(env_name)
+    env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
+    # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
-    agent = HAC(env, num_episodes=10, n_layers=2, max_subgoal_steps=10, goal_pos=(14, 14), subgoal_testing_freq=0.6, render=False)
+    sub_goals = [
+        (2, 2), (2, 5), (2, 8),
+        (5, 2), (5, 5), (5, 8),
+        (8, 2), (8, 5), (8, 8),
+    ]
+
+    subgoals = [(2, 2), (3, 3), (4, 4)]
+
+    agent = HAC(env,
+                num_episodes=50,
+                n_layers=2,
+                max_subgoal_steps=10,
+                goal_pos=(9, 9),
+                subgoal_testing_freq=0.6,
+                subgoals=subgoals,
+                render=True)
     agent.learn()

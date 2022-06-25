@@ -11,7 +11,7 @@ def get_subview(env, pos, view_size=7, rgb=False):
     topX = pos[0] - top_offset
     topY = pos[1] - top_offset
 
-    print(env.agent_pos)
+    # print(env.agent_pos)
 
     grid = env.grid.slice(topX, topY, width=view_size, height=view_size)
     grid = grid.encode()

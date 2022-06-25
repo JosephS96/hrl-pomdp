@@ -8,6 +8,7 @@ from gym_minigrid.wrappers import ImgObsWrapper
 from replay_buffer import ReplayBuffer, EpisodeReplayBuffer
 from common.schedules import LinearSchedule
 from networks.dqn import RecurrentDDQN
+from common.utils import *
 
 
 class RecurrentDDQNAgent:

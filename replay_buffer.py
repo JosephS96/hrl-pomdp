@@ -95,6 +95,34 @@ class EpisodeReplayBuffer():
         return np.reshape(sampledTraces, [batch_size * trace_length, 5])
 
 
+class ExperienceEpisodeReplayBuffer():
+    def __init__(self, size=1000):
+        self._storage = []
+        self.buffer_size = size
+        self._next_idx = 0
+
+    def __len__(self):
+        return len(self._storage)
+
+    def add(self, experience):
+        """"
+         experience -> episodes -> [ (transition1), (transition2), ..., ]   
+        """""
+        if self._next_idx >= len(self._storage):
+            self._storage.append(experience)
+        else:
+            self._storage[self._next_idx] = experience
+        self._next_idx = (self._next_idx + 1) % self.buffer_size
+
+    def sample(self, batch_size, trace_length):
+        sampled_episodes = random.sample(self._storage, batch_size)
+        sampledTraces = []
+        for episode in sampled_episodes:
+            point = np.random.randint(0, len(episode) + 1 - trace_length)
+            sampledTraces.append(episode[point:point + trace_length])
+        sampledTraces = np.array(sampledTraces)
+        return np.reshape(sampledTraces, [batch_size * trace_length, 6])
+
 class ExperienceBuffer(object):
     def __init__(self, size):
         """Create Replay buffer.
@@ -112,6 +140,7 @@ class ExperienceBuffer(object):
         return len(self._storage)
 
     def add(self, obs_t, action, reward, obs_tp1, goal, done):
+
         data = (obs_t, action, reward, obs_tp1, goal, done)
 
         if self._next_idx >= len(self._storage):
