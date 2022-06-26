@@ -126,6 +126,16 @@ class HierarchicalDDRQNAgent:
         # If the agent has reached the subgoal, provide a reward
         return 1.0 if agent_pos == (self.meta_goals[goal] or self.goal_pos) else 0.0
 
+    def get_subgoal_reached(self):
+        agent_pos = self.env.agent_pos
+        if type(agent_pos) is not tuple:
+            agent_pos = (agent_pos[0], agent_pos[1])
+
+        if agent_pos in self.meta_goals:
+            return self.meta_goals.index(agent_pos)
+        else:
+            return None
+
     def place_subgoal(self, old_pos, new_pos):
         # Remove the previous goal
         # Do not remove previous goal if:
@@ -213,7 +223,8 @@ class HierarchicalDDRQNAgent:
                 # Determine whether to test the subgoal
                 self.is_subgoal_test = np.random.random_sample() > 0.2
 
-                goal_transitions = []
+                sub_goal_transitions = []
+                meta_goal_transitions = []
 
                 # Global reward or intrinsic reward
                 # === Sub-Controller ====
@@ -239,7 +250,7 @@ class HierarchicalDDRQNAgent:
                     sub_episode_buffer.append(transition)
 
                     # Copy for goal transition
-                    goal_transitions.append([state, action, -1.0, state_next, None, done])
+                    sub_goal_transitions.append([state, action, -1.0, state_next, None, done])
 
                     global_reward += reward
                     state = state_next
@@ -272,6 +283,21 @@ class HierarchicalDDRQNAgent:
 
                 # Finish of H steps on environment
                 # === Sub-Controller ====
+
+                # Goal action transitions  - Sub Controller
+                # If the agent ended in any of the subgoals, utilize that subgoal as the
+                # goal intended for the transition
+                goal_reached = self.get_subgoal_reached()
+
+                if goal_reached is not None:
+                    goal_transition_buffer = []
+                    sub_goal_transitions[-1][2] = 1  # set reward to 1, because goal was reached
+                    new_goal_state = get_subview(self.env, self.meta_goals[goal])
+                    for transition in sub_goal_transitions:
+                        transition[4] = new_goal_state
+                        new_transition = np.reshape(np.array([transition[0], transition[1], transition[2], transition[3],new_goal_state, transition[5]]),newshape=(1, 6))
+                        goal_transition_buffer.append(new_transition)
+                    self.replay_buffer.add(goal_transition_buffer)
 
                 # If subgoal testes and not achieved, penalize
                 if self.is_subgoal_test and self.intrinsic_reward(goal) == 0:
@@ -326,6 +352,8 @@ class HierarchicalDDRQNAgent:
                     # self.env.grid.set(*goal, SubGoal())
                     self.place_subgoal(prev_goal, goal)
                     print(f"Changed environment subgoal to {self.meta_goals[goal]}")
+
+            # After Choosing N amount of subgoals
 
             # self.epsilon_meta = max(self.epsilon_meta - self.meta_epsilon_decay, self.epsilon_min)
             self.epsilon_meta = self.meta_epsilon_scheduler.value(episode)

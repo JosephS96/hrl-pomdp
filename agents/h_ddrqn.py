@@ -9,7 +9,7 @@ from gym_minigrid.wrappers import ImgObsWrapper, FullyObsWrapper
 from envs.randomempty import RandomEmpyEnv
 from replay_buffer import ExperienceEpisodeReplayBuffer
 from common.schedules import LinearSchedule
-from networks.hdqn import RecurrentDDQN
+from networks.hdqn import RecurrentDDQN, RecurrentDDQNPyTorch
 from common.utils import *
 
 
@@ -68,9 +68,9 @@ class HierarchicalDDRQNAgent:
         # Steps to give before updating target model nn
         self.target_update_steps = 2000
         self.meta_target_update_steps = 4000
-        self.model = RecurrentDDQN(input_shape=self.env.observation_space.shape, output_shape=3,
+        self.model = RecurrentDDQNPyTorch(input_shape=self.env.observation_space.shape, output_shape=3,
                          n_neurons=32)
-        self.h_model = RecurrentDDQN(input_shape=self.env.observation_space.shape, output_shape=len(self.meta_goals),
+        self.h_model = RecurrentDDQNPyTorch(input_shape=self.env.observation_space.shape, output_shape=len(self.meta_goals),
                            n_neurons=32)
 
         self.mode = 'train'
@@ -198,6 +198,8 @@ class HierarchicalDDRQNAgent:
 
             if self.render:
                 self.env.render()
+
+            #hidden_state, cell_state = self.model.model.init_hidden_states(batch_size=1)
 
             # Global goal
             while not done:
