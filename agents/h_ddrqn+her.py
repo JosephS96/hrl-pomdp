@@ -6,6 +6,7 @@ import gym
 from gym_minigrid.minigrid import SubGoal
 from gym_minigrid.wrappers import ImgObsWrapper, FullyObsWrapper
 
+from envs import StaticFourRoomsEnv
 from envs.randomempty import RandomEmpyEnv
 from replay_buffer import ExperienceEpisodeReplayBuffer
 from common.schedules import LinearSchedule
@@ -26,20 +27,20 @@ class HierarchicalDDRQNAgent:
                  meta_goals=[(2, 2), (3, 3), (4, 4)],
                  goal_pos=None,
                  render=False):
-        self.identifier = 'hierarchical-ddrqn'
+        self.identifier = 'hierarchical-ddrqn-her'
         self.env = env
         self.num_episodes = num_episodes
         self.render = render
         self.goal_pos = goal_pos
 
         # Replay Buffer
-        self.buffer_size = 150
-        self.min_size_batch = 10
+        self.buffer_size = 1500
+        self.min_size_batch = 20
         self.replay_buffer = ExperienceEpisodeReplayBuffer(self.buffer_size)
         self.batch_size = 4
 
         # Meta controller replay buffer
-        self.min_meta_size_batch = 10
+        self.min_meta_size_batch = 15
         self.meta_replay_buffer = ExperienceEpisodeReplayBuffer(self.buffer_size)
 
         # Meta controller
@@ -405,14 +406,23 @@ if __name__ == "__main__":
     env_name = 'RandomMiniGrid-11x11'
     # env = RandomEmpyEnv(grid_size=11, max_steps=80, goal_pos=(9,9), agent_pos=(1, 1))
     # env = gym.make(env_name)
-    env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
+    # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
+    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=13, max_steps=400)
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
+    """
     sub_goals = [
         (2, 2), (2, 5), (2, 8),
         (5, 2), (5, 5), (5, 8),
         (8, 2), (8, 5), (8, 8),
+    ]
+    """
+
+    sub_goals = [
+        (3, 3), (3, 6), (3, 9),
+        (6, 3), (6, 9),
+        (9, 3), (9, 6)
     ]
 
     agent = HierarchicalDDRQNAgent(env=env, num_episodes=200, render=True, meta_goals=sub_goals, goal_pos=(9, 9))

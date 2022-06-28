@@ -40,18 +40,26 @@ class StaticFourRoomsEnv(MiniGridEnv):
                     self.grid.vert_wall(xR, yT, room_h)
                     # pos = (xR, self._rand_int(yT + 1, yB))
                     pos1 = (xR, 3)
-                    pos2 = (xR, 7)
+                    pos2 = (xR, 4)
+                    pos3 = (xR, 8)
+                    pos4 = (xR, 9)
                     self.grid.set(*pos1, None)
                     self.grid.set(*pos2, None)
+                    self.grid.set(*pos3, None)
+                    self.grid.set(*pos4, None)
 
                 # Bottom wall and door
                 if j + 1 < 2:
                     self.grid.horz_wall(xL, yB, room_w)
                     # pos = (self._rand_int(xL + 1, xR), yB)
                     pos1 = (3, yB)
-                    pos2 = (7, yB)
+                    pos2 = (4, yB)
+                    pos3 = (8, yB)
+                    pos4 = (9, yB)
                     self.grid.set(*pos1, None)
                     self.grid.set(*pos2, None)
+                    self.grid.set(*pos3, None)
+                    self.grid.set(*pos4, None)
 
         # Randomize the player start position and orientation
         if self._agent_default_pos is not None:

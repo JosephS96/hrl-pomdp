@@ -132,12 +132,13 @@ if __name__ == "__main__":
 
     env_name = 'RandomMiniGrid-11x11'
     # env = StaticFourRoomsEnv(grid_size=13, max_steps=500)
-    env = RandomEmpyEnv(grid_size=11, max_steps=80)
+    # env = RandomEmpyEnv(grid_size=11, max_steps=80)
+    env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
     # env = gym.make('MiniGrid-FourRooms-v0', agent_pos=(5, 5), goal_pos=(13, 13))
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
-    agent = DoubleDQNAgent(env=env, num_episodes=200, render=True)
+    agent = DoubleDQNAgent(env=env, num_episodes=200, render=False)
     rewards, success = agent.learn()
 
     results = {}
