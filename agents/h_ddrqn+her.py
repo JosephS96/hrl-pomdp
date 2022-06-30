@@ -141,7 +141,7 @@ class HierarchicalDDRQNAgent:
         # Remove the previous goal
         # Do not remove previous goal if:
         # Goal is None or if previous goal is the global goal
-        if (old_pos is not None) and (old_pos is not self.meta_goals.index(self.goal_pos)):
+        if (old_pos is not None) and (old_pos != self.meta_goals.index(self.goal_pos)):
             old_pos = self.meta_goals[old_pos]
             self.env.grid.set(*old_pos, None)
 
@@ -175,6 +175,17 @@ class HierarchicalDDRQNAgent:
     def norm_state(self, state):
         return state / 10.0
 
+    def process_state(self, state):
+        dir_state = np.ones(shape=(state.shape[0], state.shape[1], 1)) * self.env.agent_dir
+
+        # Put the state values between 0.0 and 1.0
+        state = state / 10.0
+        dir_state = dir_state / 3
+
+        state = np.concatenate([state, dir_state], axis=2)
+
+        return state
+
     def learn(self):
 
         update_nn_steps = 0
@@ -190,7 +201,7 @@ class HierarchicalDDRQNAgent:
             sub_episode_buffer = []
 
             state = self.env.reset()
-            state = self.norm_state(state)
+            state = self.process_state(state)
             done = False
             t = 0
             episode_reward = 0
@@ -237,8 +248,10 @@ class HierarchicalDDRQNAgent:
                     goal_state = get_subview(self.env, self.meta_goals[goal])
                     goal_state = self.norm_state(goal_state)
                     action = self.choose_action(state, goal_state, self.epsilon[self.meta_goals[goal]])
+
+                    # Make an step in the environment
                     state_next, reward, done, _ = self.env.step(action)
-                    state_next = self.norm_state(state_next)
+                    state_next = self.process_state(state_next)  # Add direction
 
                     r = self.intrinsic_reward(goal)  # intrinsic reward from subgoals
 
@@ -406,8 +419,8 @@ if __name__ == "__main__":
     env_name = 'RandomMiniGrid-11x11'
     # env = RandomEmpyEnv(grid_size=11, max_steps=80, goal_pos=(9,9), agent_pos=(1, 1))
     # env = gym.make(env_name)
-    # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
-    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=13, max_steps=400)
+    env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
+    # env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=13, max_steps=400)
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 

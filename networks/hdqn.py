@@ -102,7 +102,8 @@ class RecurrentDDQN():
     def __init__(self, input_shape, output_shape, n_neurons=64, activation='linear', hidden_units=224, trace_n=7):
 
         state_placeholder = np.zeros(input_shape)
-        state_goal = np.concatenate((state_placeholder, state_placeholder), axis=2).shape
+        state_dir = np.zeros(shape=(input_shape[0], input_shape[1], 1))
+        state_goal = np.concatenate((state_placeholder, state_placeholder, state_dir), axis=2).shape
 
         self.input_shape = state_goal
         self.output_shape = output_shape
@@ -224,7 +225,7 @@ class Learner(nn.Module):
         self.trace_length = trace_length
         self.hidden_units = hidden_units
         self.output_shape = output_shape
-        self.linear1 = nn.Linear(6 , 64)
+        self.linear1 = nn.Linear(7 , 64)
         self.linear2 = nn.Linear(64, 32)
         self.lstm = nn.LSTM(hidden_units, hidden_units)
         self.adv = nn.Linear(hidden_units, output_shape)
@@ -265,7 +266,8 @@ class RecurrentDDQNPyTorch():
     def __init__(self, input_shape, output_shape, n_neurons=64, activation='linear', hidden_units=224, trace_n=7):
 
         state_placeholder = np.zeros(input_shape)
-        state_goal = np.concatenate((state_placeholder, state_placeholder), axis=2).shape
+        state_dir = np.zeros(shape=(input_shape[0], input_shape[1], 1))
+        state_goal = np.concatenate((state_placeholder, state_placeholder, state_dir), axis=2).shape
 
         self.input_shape = state_goal
         self.output_shape = output_shape
@@ -342,7 +344,6 @@ class RecurrentDDQNPyTorch():
 
         target_q_value, _, _= self.model.predict(state_goal_batch, hidden_state, cell_state)  # Current state
         q_value, _, _ = self.target.predict(next_state_goal_batch, hidden_state, cell_state)  # Next state
-
 
         for index in range(batch_size):
             if done_batch[index]:
