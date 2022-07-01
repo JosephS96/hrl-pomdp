@@ -6,6 +6,7 @@ import gym
 from gym_minigrid.minigrid import SubGoal
 from gym_minigrid.wrappers import ImgObsWrapper, FullyObsWrapper
 
+from common.Logger import Logger
 from envs import StaticFourRoomsEnv
 from envs.randomempty import RandomEmpyEnv
 from replay_buffer import ExperienceEpisodeReplayBuffer
@@ -35,7 +36,7 @@ class HierarchicalDDRQNAgent:
 
         # Replay Buffer
         self.buffer_size = 1500
-        self.min_size_batch = 20
+        self.min_size_batch = 200
         self.replay_buffer = ExperienceEpisodeReplayBuffer(self.buffer_size)
         self.batch_size = 4
 
@@ -189,9 +190,9 @@ class HierarchicalDDRQNAgent:
     def learn(self):
 
         update_nn_steps = 0
-        reward_per_episode = []
-        success_rate_history = []
         n_success = 0
+
+        logger = Logger()
 
         for episode in range(self.num_episodes):
             episode_time_start = time.time()
@@ -205,6 +206,7 @@ class HierarchicalDDRQNAgent:
             done = False
             t = 0
             episode_reward = 0
+            intrinsic_reward_per_episode = 0
             action_history = []
 
             # Start selecting the final goal
@@ -228,6 +230,7 @@ class HierarchicalDDRQNAgent:
             meta_goal_transitions = []
 
             # Global goal
+            # === Meta-Controller ===
             while not done:
                 global_reward = 0  # reward
                 initial_state = state
@@ -254,6 +257,11 @@ class HierarchicalDDRQNAgent:
                     state_next = self.process_state(state_next)  # Add direction
 
                     r = self.intrinsic_reward(goal)  # intrinsic reward from subgoals
+                    intrinsic_reward_per_episode += r
+
+                    # Save rewards per episode for metrics
+                    logger.intrinsic_reward_per_step.append(r)
+                    logger.extrinsic_reward_per_step.append(reward)
 
                     # Hindsight Action Transition - SubController
                     transition_reward = 1 if r > 0 else -1
@@ -357,6 +365,7 @@ class HierarchicalDDRQNAgent:
                 print(f'Intrinsic reward: {r}, Extrinsic_reward: {global_reward}, Current goal: {self.meta_goals[goal]}')
 
                 # If the goal has not been achieved
+                # Choose a new goal
                 if not done:
                     # Remove the previous goal
                     # self.env.grid.set(*goal, None)
@@ -395,9 +404,12 @@ class HierarchicalDDRQNAgent:
             if len(meta_episode_buffer) > self.meta_trace_length:
                 self.meta_replay_buffer.add(meta_episode_buffer)
 
-            reward_per_episode.append(episode_reward)
-            success_rate_history.append(n_success / (episode + 1))
-            print(f"Success rate: {success_rate_history[-1]}")
+            logger.success_rate.append(n_success / (episode + 1))
+            logger.extrinsic_reward_per_episode.append(episode_reward)
+            logger.intrinsic_reward_per_episode.append(intrinsic_reward_per_episode)
+            logger.steps_per_episode.append(t)
+
+            print(f"Success rate: {logger.success_rate[-1]}")
 
             # print stuff for logging
             print(f'Episode: {episode}, Reward: {episode_reward}, Episode length: {t}')
@@ -408,10 +420,13 @@ class HierarchicalDDRQNAgent:
             print(f'Episode duration in seconds: {time.time() - episode_time_start}')
             print('\n')
 
+            if episode > 10:
+                logger.print_latest_statistics()
+
         if self.render:
             self.env.close()
 
-        return reward_per_episode, success_rate_history
+        return logger
 
 
 if __name__ == "__main__":
@@ -424,36 +439,31 @@ if __name__ == "__main__":
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
-    """
     sub_goals = [
         (2, 2), (2, 5), (2, 8),
         (5, 2), (5, 5), (5, 8),
         (8, 2), (8, 5), (8, 8),
     ]
-    """
 
+    """
     sub_goals = [
         (3, 3), (3, 6), (3, 9),
         (6, 3), (6, 9),
         (9, 3), (9, 6)
     ]
+    """
 
     agent = HierarchicalDDRQNAgent(env=env, num_episodes=200, render=True, meta_goals=sub_goals, goal_pos=(9, 9))
-    rewards, success = agent.learn()
+    logger = agent.learn()
 
-    results = {}
-    results['success'] = success
-    results['rewards'] = rewards
-
-    save_path = f"{PATH}/{env_name}/{agent.identifier}-{time.time()}.npy"
-    np.save(save_path, results)
+    logger.save(env_name, agent.identifier)
 
     # plt.figure()
     # plotting.plot_rewards([stats], smoothing_window=10)
     plt.ylim(0, 1.0)
-    plt.plot(range(len(rewards)), rewards)
+    plt.plot(range(len(logger.extrinsic_reward_per_episode)), logger.extrinsic_reward_per_episode)
     plt.show()
 
     plt.ylim(0, 1.0)
-    plt.plot(range(len(success)), success)
+    plt.plot(range(len(logger.success_rate)), logger.success_rate)
     plt.show()
