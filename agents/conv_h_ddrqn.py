@@ -4,17 +4,17 @@ import random
 import time
 import gym
 from gym_minigrid.minigrid import SubGoal
-from gym_minigrid.wrappers import ImgObsWrapper, FullyObsWrapper
+from gym_minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper
 
 from common.Logger import Logger
 from envs.randomempty import RandomEmpyEnv
 from replay_buffer import ExperienceEpisodeReplayBuffer
 from common.schedules import LinearSchedule
-from networks.hdqn import RecurrentDDQN, RecurrentDDQNPyTorch
+from networks.hdqn import ConvRecurrentDQN, RecurrentDDQNPyTorch
 from common.utils import *
 
 
-class HierarchicalDDRQNAgent:
+class ConvHierarchicalDDRQNAgent:
     """
     Hierarchical
     Double Deep
@@ -34,7 +34,7 @@ class HierarchicalDDRQNAgent:
 
         # Replay Buffer
         self.buffer_size = 1500
-        self.min_size_batch = 100
+        self.min_size_batch = 10
         self.replay_buffer = ExperienceEpisodeReplayBuffer(self.buffer_size)
         self.batch_size = 4
 
@@ -69,9 +69,9 @@ class HierarchicalDDRQNAgent:
         # Steps to give before updating target model nn
         self.target_update_steps = 2000
         self.meta_target_update_steps = 4000
-        self.model = RecurrentDDQNPyTorch(input_shape=self.env.observation_space.shape, output_shape=3,
+        self.model = ConvRecurrentDQN(input_shape=self.env.observation_space.shape, output_shape=3,
                          n_neurons=32)
-        self.h_model = RecurrentDDQNPyTorch(input_shape=self.env.observation_space.shape, output_shape=len(self.meta_goals),
+        self.h_model = ConvRecurrentDQN(input_shape=self.env.observation_space.shape, output_shape=len(self.meta_goals),
                            n_neurons=32)
 
         self.mode = 'train'
@@ -160,13 +160,13 @@ class HierarchicalDDRQNAgent:
 
     # Put the state values between 0.0 and 1.0
     def norm_state(self, state):
-        return state / 10.0
+        return state / 255.0
 
     def process_state(self, state):
         dir_state = np.ones(shape=(state.shape[0], state.shape[1], 1)) * self.env.agent_dir
 
         # Put the state values between 0.0 and 1.0
-        state = state / 10.0
+        state = state / 255.0
         dir_state = dir_state / 3
 
         state = np.concatenate([state, dir_state], axis=2)
@@ -197,7 +197,7 @@ class HierarchicalDDRQNAgent:
 
             # Start selecting the final goal
             goal = len(self.meta_goals) - 1
-            goal_state = get_subview(self.env, self.meta_goals[goal])  # Obtain view of the subgoal
+            goal_state = get_subview(self.env, self.meta_goals[goal], rgb=True)  # Obtain view of the subgoal
             goal_state = self.norm_state(goal_state)
             goal = self.choose_goal(state, goal_state)  # Get some goal to look for
             self.goal_selected[self.meta_goals[goal]] += 1
@@ -226,7 +226,7 @@ class HierarchicalDDRQNAgent:
                 while not (done or r > 0):
                     update_nn_steps += 1
                     # Choose action for movement in epsilon greedy
-                    goal_state = get_subview(self.env, self.meta_goals[goal])
+                    goal_state = get_subview(self.env, self.meta_goals[goal], rgb=True)
                     goal_state = self.norm_state(goal_state)
                     action = self.choose_action(state, goal_state, self.epsilon[self.meta_goals[goal]])
 
@@ -235,7 +235,6 @@ class HierarchicalDDRQNAgent:
 
                     r = self.intrinsic_reward(goal)  # intrinsic reward from subgoals
                     intrinsic_reward_per_episode += r
-                    intrinsic_done = r > 0
 
                     # Save rewards per episode for metrics
                     logger.intrinsic_reward_per_step.append(r)
@@ -243,7 +242,7 @@ class HierarchicalDDRQNAgent:
 
                     # Store transition
                     transition = np.reshape(
-                        np.array([state, action, r, state_next, get_subview(self.env, self.meta_goals[goal]), intrinsic_done]),
+                        np.array([state, action, r, state_next, get_subview(self.env, self.meta_goals[goal], rgb=True), done]),
                         newshape=(1, 6)
                     )
                     sub_episode_buffer.append(transition)
@@ -282,7 +281,7 @@ class HierarchicalDDRQNAgent:
                 # Save transitions for the meta controller, regarding goal and extrinsic rewards
                 # Save the index of the selected goal
                 transition = np.reshape(
-                    np.array([initial_state, goal, global_reward, state, get_subview(self.env, self.meta_goals[goal]), done]),
+                    np.array([initial_state, goal, global_reward, state, get_subview(self.env, self.meta_goals[goal], rgb=True), done]),
                     newshape=(1, 6)
                 )
                 meta_episode_buffer.append(transition)
@@ -308,7 +307,7 @@ class HierarchicalDDRQNAgent:
                     # self.env.grid.set(*goal, None)
                     prev_goal = goal
 
-                    prev_goal_state = get_subview(self.env, self.meta_goals[prev_goal])
+                    prev_goal_state = get_subview(self.env, self.meta_goals[prev_goal], rgb=True)
                     prev_goal_state = self.norm_state(prev_goal_state)
                     goal = self.choose_goal(state, prev_goal_state)  # Choose a new goal (returns index)
                     # self.epsilon[self.meta_goals[goal_idx]] = max(self.epsilon[self.meta_goals[goal_idx]] * self.epsilon_decay, 0.1)
@@ -353,11 +352,12 @@ class HierarchicalDDRQNAgent:
 
 if __name__ == "__main__":
     PATH = "/Users/josesanchez/Documents/IAS/Thesis-Results"
-    env_name = 'MiniGrid-Empty-11x11'
-    env = RandomEmpyEnv(grid_size=11, max_steps=150, goal_pos=(9, 9), agent_pos=(1, 1))
+    env_name = 'RandomMiniGrid-11x11'
+    env = RandomEmpyEnv(grid_size=11, max_steps=200, goal_pos=(9, 9), agent_pos=(1, 1))
     # env = gym.make(env_name)
     # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
     # env = FullyObsWrapper(env)
+    env = RGBImgPartialObsWrapper(env)
     env = ImgObsWrapper(env)
 
     sub_goals = [
@@ -366,7 +366,7 @@ if __name__ == "__main__":
         (8, 2), (8, 5), (8, 8),
     ]
 
-    agent = HierarchicalDDRQNAgent(env=env, num_episodes=1000, render=False, meta_goals=sub_goals, goal_pos=(9, 9))
+    agent = ConvHierarchicalDDRQNAgent(env=env, num_episodes=500, render=False, meta_goals=sub_goals, goal_pos=(9, 9))
     logger = agent.learn()
 
     logger.save(env_name, agent.identifier)

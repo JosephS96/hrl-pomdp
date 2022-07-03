@@ -32,12 +32,10 @@ class RandomEmpyEnv(MiniGridEnv):
         self.grid.wall_rect(0, 0, width, height)
 
         # Place a goal square in the bottom-right corner
-        """
-                Set the goal's starting point at an empty position in the grid
-        """
+        self.put_obj(Goal(), width - 2, height - 2)
 
-        self.agent_pos = None
-        pos = self.place_obj(Goal(), None, None, max_tries=math.inf)
+        # self.agent_pos = None
+        # pos = self.place_obj(Goal(), None, None, max_tries=math.inf)
 
         # Place the agent
         if self.agent_start_pos is not None:

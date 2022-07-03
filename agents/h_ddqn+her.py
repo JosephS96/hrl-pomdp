@@ -96,7 +96,7 @@ class HERhDQNAgent:
             goal = self.__epsilon_greedy_meta(state)
             return goal
         else:  # Only Exploitation
-            output = self.model.predict(state)
+            output = self.h_model.predict(state)
             action = np.argmax(output, axis=0)
             return action
 

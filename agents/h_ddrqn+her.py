@@ -105,7 +105,7 @@ class HierarchicalDDRQNAgent:
             goal = self.__epsilon_greedy_meta(state, goal_state)
             return goal
         else:  # Only Exploitation
-            output = self.model.predict(state, goal_state)
+            output = self.h_model.predict(state, goal_state)
             action = np.argmax(output, axis=0)
             return action
 
@@ -241,7 +241,6 @@ class HierarchicalDDRQNAgent:
                 self.is_subgoal_test = np.random.random_sample() < 0.2
 
                 sub_goal_transitions = []
-
 
                 # Global reward or intrinsic reward
                 # === Sub-Controller ====
