@@ -341,15 +341,15 @@ class RecurrentDDQNPyTorch():
 
         batch_size = len(state_goal_batch)
 
-        target_q_value, _, _ = self.model.predict(state_goal_batch, hidden_state, cell_state)  # Current state
-        q_value, _, _ = self.target.predict(next_state_goal_batch, hidden_state, cell_state)  # Next state
+        q_value, _, _ = self.model.predict(state_goal_batch, hidden_state, cell_state)  # Current state
+        target_q_value, _, _ = self.target.predict(next_state_goal_batch, hidden_state, cell_state)  # Next state
 
         for index in range(batch_size):
             if done_batch[index]:
                 target_q_value[index][action_batch[index]] = reward_batch[index]
             else:
-                target_q_value[index][action_batch[index]] = reward_batch[index] + gamma * (
-                    torch.amax(q_value[index]))
+                q_next_max, _ = target_q_value[index].detach().max(dim=0)
+                target_q_value[index][action_batch[index]] = reward_batch[index] + gamma * q_next_max
 
         loss = self.criterion(q_value, target_q_value)
         self.optimizer.zero_grad()

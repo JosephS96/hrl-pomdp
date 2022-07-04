@@ -352,7 +352,6 @@ class HierarchicalDDRQNAgent:
 
 
 if __name__ == "__main__":
-    PATH = "/Users/josesanchez/Documents/IAS/Thesis-Results"
     env_name = 'MiniGrid-Empty-11x11'
     env = RandomEmpyEnv(grid_size=11, max_steps=150, goal_pos=(9, 9), agent_pos=(1, 1))
     # env = gym.make(env_name)
@@ -366,7 +365,7 @@ if __name__ == "__main__":
         (8, 2), (8, 5), (8, 8),
     ]
 
-    agent = HierarchicalDDRQNAgent(env=env, num_episodes=1000, render=False, meta_goals=sub_goals, goal_pos=(9, 9))
+    agent = HierarchicalDDRQNAgent(env=env, num_episodes=500, render=True, meta_goals=sub_goals, goal_pos=(9, 9))
     logger = agent.learn()
 
     logger.save(env_name, agent.identifier)

@@ -5,6 +5,7 @@ import time
 import gym
 from gym_minigrid.wrappers import ImgObsWrapper, FullyObsWrapper
 
+from common.Logger import Logger
 from replay_buffer import ReplayBuffer
 from common.schedules import LinearSchedule
 from networks.dqn import DoubleDQN
@@ -60,6 +61,7 @@ class DoubleDQNAgent:
             # return self.env.action_space.sample()
 
     def learn(self):
+        logger = Logger()
 
         update_nn_steps = 0
         reward_per_episode = []
@@ -86,6 +88,9 @@ class DoubleDQNAgent:
                 # Save statistics for plotting
                 episode_reward += reward
                 action_history.append(action)
+
+                logger.extrinsic_reward_per_step.append(reward)
+                logger.intrinsic_reward_per_step.append(0)
 
                 # Save transitions into memory
                 self.replay_buffer.add(state, action, reward, state_next, done)
@@ -114,6 +119,14 @@ class DoubleDQNAgent:
             reward_per_episode.append(episode_reward)
             success_rate_history.append(n_success / (episode + 1))
 
+            logger.extrinsic_reward_per_episode.append(episode_reward)
+            logger.intrinsic_reward_per_episode.append(0)
+            logger.steps_per_episode.append(t)
+            logger.success_rate.append(n_success/ (episode + 1))
+
+            if episode > 10:
+                logger.print_latest_statistics()
+
             # print stuff for logging - End of Episode -
             print(
                 f'Episode: {episode}, Reward: {episode_reward}, Epsilon: {self.epsilon}, Memory length: {self.replay_buffer.__len__()}, Episode length: {t}')
@@ -122,7 +135,7 @@ class DoubleDQNAgent:
             print(f'Episode duration in seconds: {time.time() - episode_time_start}')
             print('\n')
 
-        return reward_per_episode, success_rate_history
+        return logger
 
 
 if __name__ == "__main__":
@@ -130,30 +143,25 @@ if __name__ == "__main__":
     # env_name = 'MiniGrid-Empty-16x16-v0'
     #env = gym.make(env_name)
 
-    env_name = 'RandomMiniGrid-11x11'
+    env_name = 'MiniGrid-Empty-11x11'
     # env = StaticFourRoomsEnv(grid_size=13, max_steps=500)
-    # env = RandomEmpyEnv(grid_size=11, max_steps=80)
-    env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
+    env = RandomEmpyEnv(grid_size=11, max_steps=150, goal_pos=(9, 9), agent_pos=(1, 1))
+    # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
     # env = gym.make('MiniGrid-FourRooms-v0', agent_pos=(5, 5), goal_pos=(13, 13))
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
-    agent = DoubleDQNAgent(env=env, num_episodes=200, render=False)
-    rewards, success = agent.learn()
+    agent = DoubleDQNAgent(env=env, num_episodes=500, render=False)
+    logger = agent.learn()
 
-    results = {}
-    results['success'] = success
-    results['rewards'] = rewards
-
-    save_path = f"{PATH}/{env_name}/{agent.identifier}-{time.time()}.npy"
-    np.save(save_path, results)
+    logger.save(env_name, agent.identifier)
 
     # plt.figure()
     # plotting.plot_rewards([stats], smoothing_window=10)
     plt.ylim(0, 1.0)
-    plt.plot(range(len(rewards)), rewards)
+    plt.plot(range(len(logger.extrinsic_reward_per_episode)), logger.extrinsic_reward_per_episode)
     plt.show()
 
     plt.ylim(0, 1.0)
-    plt.plot(range(len(success)), success)
+    plt.plot(range(len(logger.success_rate)), logger.success_rate)
     plt.show()

@@ -256,6 +256,7 @@ class HierarchicalDDRQNAgent:
                     state_next = self.process_state(state_next)  # Add direction
 
                     r = self.intrinsic_reward(goal)  # intrinsic reward from subgoals
+                    intrinsic_done = r > 0  #If reward was not zero, a subgoal was reached
                     intrinsic_reward_per_episode += r
 
                     # Save rewards per episode for metrics
@@ -267,13 +268,13 @@ class HierarchicalDDRQNAgent:
 
                     # Store transition
                     transition = np.reshape(
-                        np.array([state, action, transition_reward, state_next, get_subview(self.env, self.meta_goals[goal]), done]),
+                        np.array([state, action, transition_reward, state_next, get_subview(self.env, self.meta_goals[goal]), intrinsic_done]),
                         newshape=(1, 6)
                     )
                     sub_episode_buffer.append(transition)
 
                     # Copy for goal transition
-                    sub_goal_transitions.append([state, action, -1.0, state_next, None, done])
+                    sub_goal_transitions.append([state, action, -1.0, state_next, None, intrinsic_done])
 
                     global_reward += reward
                     state = state_next
@@ -315,6 +316,7 @@ class HierarchicalDDRQNAgent:
                 if goal_reached is not None and len(sub_goal_transitions) > self.sub_trace_length:
                     goal_transition_buffer = []
                     sub_goal_transitions[-1][2] = 1  # set reward to 1, because goal was reached
+                    sub_goal_transitions[-1][5] = True  # Set done to True, because a goal was achieved
                     new_goal_state = get_subview(self.env, self.meta_goals[goal])
                     print(" ===== Create Hindisght Goal Transitions! SUB======")
                     for transition in sub_goal_transitions:
@@ -325,7 +327,6 @@ class HierarchicalDDRQNAgent:
 
                 # If subgoal testes and not achieved, penalize
                 if self.is_subgoal_test and self.intrinsic_reward(goal) == 0:
-                    print(" ===== SUBGOAL TESTING======")
                     transition = np.reshape(
                         np.array([initial_state, goal, -self.max_steps_per_goal, state,
                                   get_subview(self.env, self.meta_goals[goal]), done]),
@@ -339,7 +340,7 @@ class HierarchicalDDRQNAgent:
                 # Save the index of the selected goal
                 if goal_reached is not None:
                     meta_transition_reward = global_reward if global_reward > 0 else -1
-
+                    print(" ===== Create Hindisght Goal Transitions! META======")
                     transition = np.reshape(
                         np.array([initial_state, goal_reached, meta_transition_reward, state, get_subview(self.env, self.meta_goals[goal]), done]),
                         newshape=(1, 6)
@@ -390,6 +391,7 @@ class HierarchicalDDRQNAgent:
                 temp_buffer = []
                 reached_goal_state = get_subview(self.env, self.meta_goals[goal_reached])
                 meta_goal_transitions[-1][0][2] = 1
+                meta_goal_transitions[-1][0][5] = True
                 print(" ===== Create Hindisght Action Transitions! META======")
                 for transition in meta_goal_transitions:
                     transition[0][4] = reached_goal_state
@@ -430,10 +432,10 @@ class HierarchicalDDRQNAgent:
 
 if __name__ == "__main__":
     PATH = "/Users/josesanchez/Documents/IAS/Thesis-Results"
-    env_name = 'RandomMiniGrid-11x11'
+    env_name = 'MiniGrid-Empty-11x11'
     # env = RandomEmpyEnv(grid_size=11, max_steps=80, goal_pos=(9,9), agent_pos=(1, 1))
     # env = gym.make(env_name)
-    env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
+    env = RandomEmpyEnv(grid_size=11, max_steps=150, goal_pos=(9, 9), agent_pos=(1, 1))
     # env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=13, max_steps=400)
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
@@ -452,7 +454,7 @@ if __name__ == "__main__":
     ]
     """
 
-    agent = HierarchicalDDRQNAgent(env=env, num_episodes=200, render=True, meta_goals=sub_goals, goal_pos=(9, 9))
+    agent = HierarchicalDDRQNAgent(env=env, num_episodes=500, render=False, meta_goals=sub_goals, goal_pos=(9, 9))
     logger = agent.learn()
 
     logger.save(env_name, agent.identifier)

@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     # file_path = f"{BASE_PATH}/{env_name}/{agent_name}-{time.time()}.npy"
 
-    file_path = "/Users/josesanchez/Documents/IAS/Thesis-Results/RandomMiniGrid-11x11/hierarchical-ddrqn-1656089587.9392278.npy"
+    file_path = "/Users/josesanchez/Documents/IAS/Thesis-Results/FourRooms-13x13/double-dqn-1655219414.068259.npy"
     values = np.load(file_path, allow_pickle=True).item()
 
     data = pd.DataFrame.from_dict(values)

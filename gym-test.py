@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     # env = gym.make('MiniGrid-SimpleCrossingS9N1-v0')
     # env = gym.make('MiniGrid-Empty-16x16-v0')
-    env = StaticFourRoomsEnv(agent_pos= (2, 2), goal_pos=(9, 9) , grid_size=13, max_steps=20)
+    env = StaticFourRoomsEnv(agent_pos= (2, 2), goal_pos=(9, 9) , grid_size=11, max_steps=20)
     # env = RandomEmpyEnv()
     # env = Apartment()
     # env = gym.make('MiniGrid-FourRooms-v0', agent_pos=(5,5), goal_pos=(13,13))
