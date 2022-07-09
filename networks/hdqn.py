@@ -231,7 +231,6 @@ class Learner(nn.Module):
         self.adv = nn.Linear(hidden_units, output_shape)
         self.val = nn.Linear(hidden_units, 1)
 
-
     def predict(self,  state, hidden_state, cell_state):
         return self.forward(state, hidden_state, cell_state)
 
@@ -257,6 +256,7 @@ class Learner(nn.Module):
         h = torch.zeros( 1, 7 , 224).float()
         c = torch.zeros( 1, 7,  224).float()
         return h, c
+
 
 class RecurrentDDQNPyTorch():
     """"
@@ -284,10 +284,20 @@ class RecurrentDDQNPyTorch():
         self.criterion = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.model.parameters())
 
-        self.hidden_state, self.cell_state =  self.model.init_hidden_states()
+        self.hidden_state = None
+        self.cell_state = None
+        self.init_hidden()
+        # self.hidden_state, self.cell_state = self.model.init_hidden_states()
 
     def __create_model(self):
         return Learner(self.hidden_units, self.output_shape, self.trace_length)
+
+    def init_hidden(self):
+        self.hidden_state, self.cell_state = self.model.init_hidden_states()
+
+    def set_hidden(self, hidden, cell):
+        self.hidden_state = hidden
+        self.cell_state = cell
 
     def update_target_network(self):
         self.target.load_state_dict(self.model.state_dict())
@@ -333,6 +343,7 @@ class RecurrentDDQNPyTorch():
         goal_batch = np.array(goal_batch)
         done_batch = np.array(done_batch)
 
+        # Update is always perform by resetting the lstm hidden
         hidden_state, cell_state = self.model.init_hidden_states()
 
         # Encode the goal into the states

@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
     env_name = 'MiniGrid-Empty-11x11'
     # env = StaticFourRoomsEnv(grid_size=13, max_steps=500)
-    env = RandomEmpyEnv(grid_size=11, max_steps=150, goal_pos=(9, 9), agent_pos=(1, 1))
+    env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
     # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
     # env = gym.make('MiniGrid-FourRooms-v0', agent_pos=(5, 5), goal_pos=(13, 13))
     # env = FullyObsWrapper(env)

@@ -3,10 +3,12 @@ import numpy as np
 import random
 import time
 import gym
+import torch
 from gym_minigrid.minigrid import SubGoal
 from gym_minigrid.wrappers import ImgObsWrapper, FullyObsWrapper
 
 from common.Logger import Logger
+from envs import StaticFourRoomsEnv
 from envs.randomempty import RandomEmpyEnv
 from replay_buffer import ExperienceEpisodeReplayBuffer
 from common.schedules import LinearSchedule
@@ -33,8 +35,8 @@ class HierarchicalDDRQNAgent:
         self.goal_pos = goal_pos
 
         # Replay Buffer
-        self.buffer_size = 1500
-        self.min_size_batch = 100
+        self.buffer_size = 3500
+        self.min_size_batch = 150
         self.replay_buffer = ExperienceEpisodeReplayBuffer(self.buffer_size)
         self.batch_size = 4
 
@@ -93,6 +95,9 @@ class HierarchicalDDRQNAgent:
             return action
         else:  # Exploration
             # Reduce the exploration probability
+            # Prediction is done in order to update the LSTM hidden state
+            # but result is not used anyway
+            _ = self.model.predict(state, goal_state)
             return random.randint(0, 2)
             # return self.env.action_space.sample()
 
@@ -113,6 +118,7 @@ class HierarchicalDDRQNAgent:
             goal_index = np.argmax(output, axis=0)
             return goal_index
         else:
+            _ = self.h_model.predict(state, goal_state)
             goal_index = random.randint(0, len(self.meta_goals) - 1)
             return goal_index
 
@@ -195,6 +201,9 @@ class HierarchicalDDRQNAgent:
             intrinsic_reward_per_episode = 0
             action_history = []
 
+            # Reset meta-controller hidden state
+            self.h_model.init_hidden()
+
             # Start selecting the final goal
             goal = len(self.meta_goals) - 1
             goal_state = get_subview(self.env, self.meta_goals[goal])  # Obtain view of the subgoal
@@ -213,14 +222,16 @@ class HierarchicalDDRQNAgent:
             if self.render:
                 self.env.render()
 
-            #hidden_state, cell_state = self.model.model.init_hidden_states(batch_size=1)
-
             # Global goal
             while not done:
                 global_reward = 0  # reward
                 initial_state = state
                 r = 0  # intrinsic reward
                 steps_per_goal = 0
+
+                # Reset sub-controller hidden state to zeros
+                # Every time a new subgoal is chosen
+                self.model.init_hidden()
 
                 # Global reward or intrinsic reward
                 while not (done or r > 0):
@@ -352,16 +363,28 @@ class HierarchicalDDRQNAgent:
 
 
 if __name__ == "__main__":
-    env_name = 'MiniGrid-Empty-11x11'
-    env = RandomEmpyEnv(grid_size=11, max_steps=150, goal_pos=(9, 9), agent_pos=(1, 1))
+    print(torch.initial_seed())
+    #env_name = 'MiniGrid-Empty-11x11'
+    # env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
+
+    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=11, max_steps=500)
+    env_name = "StaticFourRooms-11x11"
     # env = gym.make(env_name)
     # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
+    """
     sub_goals = [
         (2, 2), (2, 5), (2, 8),
         (5, 2), (5, 5), (5, 8),
+        (8, 2), (8, 5), (8, 8),
+    ]
+    """
+
+    sub_goals = [
+        (2, 2), (2, 5), (2, 8),
+        (5, 2),  (5, 8),
         (8, 2), (8, 5), (8, 8),
     ]
 

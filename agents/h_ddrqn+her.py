@@ -35,13 +35,13 @@ class HierarchicalDDRQNAgent:
         self.goal_pos = goal_pos
 
         # Replay Buffer
-        self.buffer_size = 1500
-        self.min_size_batch = 200
+        self.buffer_size = 3500
+        self.min_size_batch = 150
         self.replay_buffer = ExperienceEpisodeReplayBuffer(self.buffer_size)
         self.batch_size = 4
 
         # Meta controller replay buffer
-        self.min_meta_size_batch = 15
+        self.min_meta_size_batch = 10
         self.meta_replay_buffer = ExperienceEpisodeReplayBuffer(self.buffer_size)
 
         # Meta controller
@@ -97,6 +97,7 @@ class HierarchicalDDRQNAgent:
             return action
         else:  # Exploration
             # Reduce the exploration probability
+            _ = self.model.predict(state, goal_state)
             return random.randint(0, 2)
             # return self.env.action_space.sample()
 
@@ -117,6 +118,7 @@ class HierarchicalDDRQNAgent:
             goal_index = np.argmax(output, axis=0)
             return goal_index
         else:
+            _ = self.h_model.predict(state, goal_state)
             goal_index = random.randint(0, len(self.meta_goals) - 1)
             return goal_index
 
@@ -209,6 +211,9 @@ class HierarchicalDDRQNAgent:
             intrinsic_reward_per_episode = 0
             action_history = []
 
+            # Reset meta controller hidden state at the beginning of every episode
+            self.h_model.init_hidden()
+
             # Start selecting the final goal
             goal = len(self.meta_goals) - 1
             goal_state = get_subview(self.env, self.meta_goals[goal])  # Obtain view of the subgoal
@@ -241,6 +246,9 @@ class HierarchicalDDRQNAgent:
                 self.is_subgoal_test = np.random.random_sample() < 0.2
 
                 sub_goal_transitions = []
+
+                # reset sub-controller hidden state to zeros
+                self.model.init_hidden()
 
                 # Global reward or intrinsic reward
                 # === Sub-Controller ====
@@ -432,11 +440,13 @@ class HierarchicalDDRQNAgent:
 
 if __name__ == "__main__":
     PATH = "/Users/josesanchez/Documents/IAS/Thesis-Results"
-    env_name = 'MiniGrid-Empty-11x11'
-    # env = RandomEmpyEnv(grid_size=11, max_steps=80, goal_pos=(9,9), agent_pos=(1, 1))
-    # env = gym.make(env_name)
-    env = RandomEmpyEnv(grid_size=11, max_steps=150, goal_pos=(9, 9), agent_pos=(1, 1))
-    # env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=13, max_steps=400)
+
+    # Empty Grid with fixed agent and goal positions
+    # env_name = 'MiniGrid-Empty-11x11'
+    # env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
+
+    env_name = "StaticFourRooms-11x11"
+    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=11, max_steps=400)
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
