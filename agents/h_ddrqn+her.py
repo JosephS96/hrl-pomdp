@@ -36,12 +36,15 @@ class HierarchicalDDRQNAgent:
 
         # Replay Buffer
         self.buffer_size = 3500
-        self.min_size_batch = 150
+        self.min_size_batch = 400
         self.replay_buffer = ExperienceEpisodeReplayBuffer(self.buffer_size)
         self.batch_size = 4
+        self.sub_trace_length = 8
 
         # Meta controller replay buffer
-        self.min_meta_size_batch = 10
+        self.meta_batch_size = 12
+        self.min_meta_size_batch = 25
+        self.meta_trace_length = 1
         self.meta_replay_buffer = ExperienceEpisodeReplayBuffer(self.buffer_size)
 
         # Meta controller
@@ -54,8 +57,6 @@ class HierarchicalDDRQNAgent:
         self.meta_epsilon_scheduler = LinearSchedule(num_episodes, self.epsilon_min)
 
         # Hyper-parameters
-        self.sub_trace_length = 7
-        self.meta_trace_length = 1
         self.max_steps_per_goal = 20
         self.is_subgoal_test = False  # Whether the current goal is being tested
 
@@ -73,10 +74,18 @@ class HierarchicalDDRQNAgent:
         # Steps to give before updating target model nn
         self.target_update_steps = 2000
         self.meta_target_update_steps = 4000
-        self.model = RecurrentDDQNPyTorch(input_shape=self.env.observation_space.shape, output_shape=3,
-                         n_neurons=32)
-        self.h_model = RecurrentDDQNPyTorch(input_shape=self.env.observation_space.shape, output_shape=len(self.meta_goals),
-                           n_neurons=32)
+        self.model = RecurrentDDQNPyTorch(
+            input_shape=self.env.observation_space.shape,
+            output_shape=3,
+            trace_n=self.sub_trace_length,
+            meta=False
+        )
+        self.h_model = RecurrentDDQNPyTorch(
+            input_shape=self.env.observation_space.shape,
+            output_shape=len(self.meta_goals),
+            trace_n=self.meta_trace_length,
+            meta=True
+        )
 
         self.mode = 'train'
 
@@ -293,11 +302,13 @@ class HierarchicalDDRQNAgent:
 
                     if self.replay_buffer.__len__() > self.min_size_batch:
                         batch_memory = self.replay_buffer.sample(self.batch_size, self.sub_trace_length)
-                        self.model.update_params(batch_memory, self.gamma)
+                        # self.model.update_params(batch_memory, self.gamma)
+                        self.model.update_params2(batch_memory, self.gamma, self.batch_size)
 
                     if self.meta_replay_buffer.__len__() > self.min_meta_size_batch:
-                        batch_memory = self.meta_replay_buffer.sample(self.batch_size, self.meta_trace_length)
-                        self.h_model.update_params(batch_memory, self.gamma)
+                        batch_memory = self.meta_replay_buffer.sample(self.meta_batch_size, self.meta_trace_length)
+                        # self.h_model.update_params(batch_memory, self.gamma)
+                        self.h_model.update_params2(batch_memory, self.gamma, self.meta_batch_size)
 
                     action_history.append(action)
                     if r > 0:  # If subgoal was reached
@@ -442,13 +453,14 @@ if __name__ == "__main__":
     PATH = "/Users/josesanchez/Documents/IAS/Thesis-Results"
 
     # Empty Grid with fixed agent and goal positions
-    # env_name = 'MiniGrid-Empty-11x11'
-    # env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
+    env_name = 'MiniGrid-Empty-11x11'
+    env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
 
-    env_name = "StaticFourRooms-11x11"
-    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=11, max_steps=400)
+    # env_name = "StaticFourRooms-11x11"
+    # env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=11, max_steps=400)
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
+
 
     sub_goals = [
         (2, 2), (2, 5), (2, 8),
@@ -458,9 +470,9 @@ if __name__ == "__main__":
 
     """
     sub_goals = [
-        (3, 3), (3, 6), (3, 9),
-        (6, 3), (6, 9),
-        (9, 3), (9, 6)
+        (2, 2), (2, 5), (2, 8),
+        (5, 2),  (5, 8),
+        (8, 2), (8, 5), (8, 8),
     ]
     """
 
