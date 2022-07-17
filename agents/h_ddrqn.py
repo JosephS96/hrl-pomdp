@@ -9,6 +9,7 @@ from gym_minigrid.wrappers import ImgObsWrapper, FullyObsWrapper
 
 from common.Logger import Logger
 from envs import StaticFourRoomsEnv
+from envs.closed_four_rooms import ClosedFourRoomsEnv
 from envs.randomempty import RandomEmpyEnv
 from replay_buffer import ExperienceEpisodeReplayBuffer
 from common.schedules import LinearSchedule
@@ -57,7 +58,7 @@ class HierarchicalDDRQNAgent:
         self.meta_epsilon_scheduler = LinearSchedule(num_episodes, self.epsilon_min)
 
         # Hyper-parameters
-        self.max_steps_per_goal = 50
+        self.max_steps_per_goal = 500
         self.gamma = 0.99  # discount factor
         self.alpha = 0.001  # Learning rate
         self.epsilon_decay = 0.95
@@ -138,7 +139,7 @@ class HierarchicalDDRQNAgent:
 
         # If the agent has reached the subgoal, provide a reward
         # return 1.0 if agent_pos == (self.meta_goals[goal] or self.goal_pos) else 0.0
-        return 1.0 if agent_pos == (self.meta_goals[goal]) else 0.0
+        return 1.0 if agent_pos == (self.meta_goals[goal]) else 0
 
     def place_subgoal(self, old_pos, new_pos):
         # Remove the previous goal
@@ -198,9 +199,11 @@ class HierarchicalDDRQNAgent:
         if type(agent_pos) is not tuple:
             agent_pos = (agent_pos[0], agent_pos[1])
 
+        reward = 1 - 0.9 * (self.env.step_count / self.env.max_steps)
+
         # If the agent has reached the subgoal, provide a reward
         # return 1.0 if agent_pos == (self.meta_goals[goal] or self.goal_pos) else 0.0
-        return 1.0 if agent_pos == (self.goal_pos) else 0.0
+        return reward if agent_pos == (self.goal_pos) else 0.0
 
     def learn(self):
 
@@ -265,8 +268,11 @@ class HierarchicalDDRQNAgent:
                     action = self.choose_action(state, goal_state, self.epsilon[self.meta_goals[goal]])
 
                     state_next, reward, done, _ = self.env.step(action)
+
                     reward = self.extrinsic_reward()
-                    done = reward > 0
+                    if reward > 0:
+                        done = True
+
                     state_next = self.process_state(state_next)
 
                     r = self.intrinsic_reward(goal)  # intrinsic reward from subgoals
@@ -279,7 +285,7 @@ class HierarchicalDDRQNAgent:
 
                     # Store transition
                     transition = np.reshape(
-                        np.array([state, action, r, state_next, get_subview(self.env, self.meta_goals[goal]), intrinsic_done]),
+                        np.array([state, action, r, state_next, self.norm_state(get_subview(self.env, self.meta_goals[goal])), intrinsic_done]),
                         newshape=(1, 6)
                     )
                     sub_episode_buffer.append(transition)
@@ -320,7 +326,7 @@ class HierarchicalDDRQNAgent:
                 # Save transitions for the meta controller, regarding goal and extrinsic rewards
                 # Save the index of the selected goal
                 transition = np.reshape(
-                    np.array([initial_state, goal, global_reward, state, get_subview(self.env, self.meta_goals[goal]), done]),
+                    np.array([initial_state, goal, global_reward, state, self.norm_state(get_subview(self.env, self.meta_goals[goal])), done]),
                     newshape=(1, 6)
                 )
                 meta_episode_buffer.append(transition)
@@ -391,31 +397,43 @@ class HierarchicalDDRQNAgent:
 
 if __name__ == "__main__":
     print(torch.initial_seed())
-    #env_name = 'MiniGrid-Empty-11x11'
-    # env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
 
-    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(4, 4), grid_size=11, max_steps=400)
+    """
+    env_name = 'MiniGrid-Empty-11x11'
+    env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
+    
+        sub_goals = [
+            (2, 2), (2, 5), (2, 8),
+            (5, 2), (5, 5), (5, 8),
+            (8, 2), (8, 5), (8, 8),
+        ]
+    """
+
+    """
     env_name = "StaticFourRooms-11x11"
+    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=11, max_steps=400)
+    sub_goals = [
+        (2, 2), (2, 5), (2, 8),
+        (5, 2), (5, 8),
+        (8, 2), (8, 5), (8, 8),
+    ]
+    """
+
+    env_name = "ClosedFourRooms-11x11"
+    goal_pos = (9, 1)
+    env = ClosedFourRoomsEnv(agent_pos=(2, 2), goal_pos=goal_pos, grid_size=11, max_steps=400)
+    sub_goals = [
+        (2, 8),     (8, 2),
+        (2, 5),     (8, 5),
+        (2, 8), (5, 8), (8, 8),
+    ]
+
     # env = gym.make(env_name)
     # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
-    """
-    sub_goals = [
-        (2, 2), (2, 5), (2, 8),
-        (5, 2), (5, 5), (5, 8),
-        (8, 2), (8, 5), (8, 8),
-    ]
-    """
-
-    sub_goals = [
-        #(2, 2), (2, 5), (2, 8),
-        (5, 2),  (5, 8),
-        #(8, 2), (8, 5), (8, 8),
-    ]
-
-    agent = HierarchicalDDRQNAgent(env=env, num_episodes=100, render=True, meta_goals=sub_goals, goal_pos=(4, 4))
+    agent = HierarchicalDDRQNAgent(env=env, num_episodes=500, render=True, meta_goals=sub_goals, goal_pos=goal_pos)
     logger = agent.learn()
 
     logger.save(env_name, agent.identifier)

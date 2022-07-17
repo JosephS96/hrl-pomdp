@@ -453,11 +453,11 @@ if __name__ == "__main__":
     PATH = "/Users/josesanchez/Documents/IAS/Thesis-Results"
 
     # Empty Grid with fixed agent and goal positions
-    env_name = 'MiniGrid-Empty-11x11'
-    env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
+    # env_name = 'MiniGrid-Empty-11x11'
+    # env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
 
-    # env_name = "StaticFourRooms-11x11"
-    # env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=11, max_steps=400)
+    env_name = "StaticFourRooms-11x11"
+    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=11, max_steps=400)
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
