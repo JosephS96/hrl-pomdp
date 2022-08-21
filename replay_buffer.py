@@ -118,6 +118,8 @@ class ExperienceEpisodeReplayBuffer():
         sampled_episodes = random.sample(self._storage, batch_size)
         sampledTraces = []
         for episode in sampled_episodes:
+            high_limit = len(episode) + 1 - trace_length
+            # print(high_limit)
             point = np.random.randint(0, len(episode) + 1 - trace_length)
             sampledTraces.append(episode[point:point + trace_length])
         sampledTraces = np.array(sampledTraces)
