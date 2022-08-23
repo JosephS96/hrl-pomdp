@@ -58,6 +58,7 @@ class HierarchicalDDRQNAgent:
         self.meta_epsilon_scheduler = LinearSchedule(num_episodes, self.epsilon_min)
 
         # Hyper-parameters
+        self.update_steps = 5
         self.max_steps_per_goal = 500
         self.gamma = 0.99  # discount factor
         self.alpha = 0.001  # Learning rate
@@ -296,12 +297,12 @@ class HierarchicalDDRQNAgent:
                     if self.render:
                         self.env.render()
 
-                    if self.replay_buffer.__len__() > self.min_size_batch:
+                    if self.replay_buffer.__len__() > self.min_size_batch and t % self.update_steps == 0:
                         batch_memory = self.replay_buffer.sample(self.batch_size, self.sub_trace_length)
                         # self.model.update_params(batch_memory, self.gamma)
                         self.model.update_params2(batch_memory, self.gamma, self.batch_size)
 
-                    if self.meta_replay_buffer.__len__() > self.min_meta_size_batch:
+                    if self.meta_replay_buffer.__len__() > self.min_meta_size_batch and t % self.update_steps == 0:
                         batch_memory = self.meta_replay_buffer.sample(self.meta_batch_size, self.meta_trace_length)
                         # self.h_model.update_params(batch_memory, self.gamma)
                         self.h_model.update_params2(batch_memory, self.gamma, self.meta_batch_size)
@@ -334,10 +335,10 @@ class HierarchicalDDRQNAgent:
                 if done and (global_reward > 0):
                     n_success += 1
 
-                if self.target_update_steps % update_nn_steps == 0:
+                if update_nn_steps % self.target_update_steps == 0:
                     self.model.update_target_network()
 
-                if self.meta_target_update_steps % update_nn_steps == 0:
+                if update_nn_steps % self.meta_target_update_steps == 0:
                     self.h_model.update_target_network()
 
                 if len(sub_episode_buffer) > self.sub_trace_length:
@@ -418,22 +419,24 @@ if __name__ == "__main__":
         (8, 2), (8, 5), (8, 8),
     ]
     """
-
-    env_name = "ClosedFourRooms-11x11"
-    goal_pos = (9, 1)
-    env = ClosedFourRoomsEnv(agent_pos=(2, 2), goal_pos=goal_pos, grid_size=11, max_steps=400)
+    env_name = "StaticFourRooms-11x11"
+    goal_pos = (8, 7)
+    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=goal_pos, grid_size=11, max_steps=400)
     sub_goals = [
-        (2, 8),     (8, 2),
-        (2, 5),     (8, 5),
+        (2, 2), (8, 2),
+        (3, 3), (7, 3), (5, 2), (5, 3),
+        (2, 5), (3, 5), (7, 5), (8, 5),
+        (3, 7), (5, 7), (7, 7),
         (2, 8), (5, 8), (8, 8),
     ]
+
 
     # env = gym.make(env_name)
     # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
-    agent = HierarchicalDDRQNAgent(env=env, num_episodes=500, render=True, meta_goals=sub_goals, goal_pos=goal_pos)
+    agent = HierarchicalDDRQNAgent(env=env, num_episodes=1000, render=True, meta_goals=sub_goals, goal_pos=goal_pos)
     logger = agent.learn()
 
     logger.save(env_name, agent.identifier)

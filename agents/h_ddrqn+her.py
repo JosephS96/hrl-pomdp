@@ -355,7 +355,7 @@ class HierarchicalDDRQNAgent:
                     sub_goal_transitions[-1][2] = 1  # set reward to 1, because goal was reached
                     sub_goal_transitions[-1][5] = True  # Set done to True, because a goal was achieved
                     new_goal_state = get_subview(self.env, self.meta_goals[goal])
-                    print(" ===== Create Hindisght Goal Transitions! SUB======")
+                    # print(" ===== Create Hindisght Goal Transitions! SUB======")
                     for transition in sub_goal_transitions:
                         transition[4] = new_goal_state
                         new_transition = np.reshape(np.array([transition[0], transition[1], transition[2], transition[3],new_goal_state, transition[5]]),newshape=(1, 6))
@@ -377,7 +377,7 @@ class HierarchicalDDRQNAgent:
                 # Save the index of the selected goal
                 if goal_reached is not None:
                     meta_transition_reward = global_reward if global_reward > 0 else -1
-                    print(" ===== Create Hindisght Goal Transitions! META======")
+                    # print(" ===== Create Hindisght Goal Transitions! META======")
                     transition = np.reshape(
                         np.array([initial_state, goal_reached, meta_transition_reward, state, get_subview(self.env, self.meta_goals[goal]), done]),
                         newshape=(1, 6)
@@ -388,10 +388,10 @@ class HierarchicalDDRQNAgent:
                 if done and (global_reward > 0):
                     n_success += 1
 
-                if  update_nn_steps % self.target_update_steps== 0:
+                if update_nn_steps % self.target_update_steps == 0:
                     self.model.update_target_network()
 
-                if  update_nn_steps % self.meta_target_update_steps == 0:
+                if update_nn_steps % self.meta_target_update_steps == 0:
                     self.h_model.update_target_network()
 
                 # Corresponds to a list of at least n transitions
@@ -399,7 +399,7 @@ class HierarchicalDDRQNAgent:
                     self.replay_buffer.add(sub_episode_buffer)
 
                 # Logg stuff for debugging
-                print(f'Intrinsic reward: {r}, Extrinsic_reward: {global_reward}, Current goal: {self.meta_goals[goal]}')
+                # print(f'Intrinsic reward: {r}, Extrinsic_reward: {global_reward}, Current goal: {self.meta_goals[goal]}')
 
                 # If the goal has not been achieved
                 # Choose a new goal
@@ -418,7 +418,7 @@ class HierarchicalDDRQNAgent:
                     # Place the new subgoal in the environment
                     # self.env.grid.set(*goal, SubGoal())
                     self.place_subgoal(prev_goal, goal)
-                    print(f"Changed environment subgoal to {self.meta_goals[goal]}")
+                    # print(f"Changed environment subgoal to {self.meta_goals[goal]}")
 
             # After Choosing N amount of subgoals
 
@@ -429,7 +429,7 @@ class HierarchicalDDRQNAgent:
                 reached_goal_state = get_subview(self.env, self.meta_goals[goal_reached])
                 meta_goal_transitions[-1][0][2] = 1
                 meta_goal_transitions[-1][0][5] = True
-                print(" ===== Create Hindisght Action Transitions! META======")
+                # print(" ===== Create Hindisght Action Transitions! META======")
                 for transition in meta_goal_transitions:
                     transition[0][4] = reached_goal_state
                     new_transition = np.reshape(np.array([transition[0][0], transition[0][1], transition[0][2], transition[0][3],reached_goal_state, transition[0][5]]),newshape=(1, 6))
