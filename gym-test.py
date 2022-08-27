@@ -119,26 +119,33 @@ if __name__ == "__main__":
 
     # env = gym.make('MiniGrid-SimpleCrossingS9N1-v0')
     # env = gym.make('MiniGrid-Empty-16x16-v0')
-    env = StaticFourRoomsEnv(agent_pos= (2, 2), goal_pos=(9, 9) , grid_size=11, max_steps=20)
-    # env = RandomEmpyEnv()
-    # env = Apartment()
-    # env = gym.make('MiniGrid-FourRooms-v0', agent_pos=(5,5), goal_pos=(13,13))
-    # env = FullyObsWrapper(env)
-    # env = RGBImgPartialObsWrapper(env)
-    # env = PartialSubgoalWrapper(env)
+    env_name = "StaticFourRooms-11x11"
+    goal_pos = (8, 7)
+    env = StaticFourRoomsEnv(agent_pos=(1, 1), goal_pos=goal_pos, grid_size=11, max_steps=400)
+    sub_goals = [
+        (2, 2), (8, 2),
+        (3, 3), (7, 3), (5, 2), (5, 3),
+        (2, 5), (3, 5), (7, 5), (8, 5),
+        (3, 7), (5, 7), (7, 7),
+        (2, 8), (5, 8), (8, 8),
+    ]
+
     env = ImgObsWrapper(env)
     env.reset()
     done = False
 
-    env.place_obj(SubGoal(), top=(3, 3), size=(1, 1))
+    for goal in sub_goals:
+        env.place_obj(SubGoal(), top=goal, size=(1, 1))
+
     # sub_view = get_subgoal_view(env, (2, 2))
-    sub_view = get_subview(env, (3, 3))
+    # sub_view = get_subview(env, (3, 3))
 
     # plt.imshow(sub_view, cmap='hot', interpolation='nearest')
     # plt.show()
+    env.grid.set(*(8, 7), None)
 
     for i in range(10):
-        env.reset()
+        # env.reset()
         done = False
         while not done:
             env.render()

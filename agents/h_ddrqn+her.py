@@ -138,8 +138,15 @@ class HierarchicalDDRQNAgent:
         if type(agent_pos) is not tuple:
             agent_pos = (agent_pos[0], agent_pos[1])
 
+        env_intrinsic = 0.0
+        transition_intrinsic = -1.0
+        if agent_pos == self.meta_goals[goal]:
+            env_intrinsic = 1.0
+            transition_intrinsic = 1.0
+
         # If the agent has reached the subgoal, provide a reward
-        return 1.0 if agent_pos == (self.meta_goals[goal]) else 0.0
+        # otherwise penalize. Hindsight Action Transition
+        return env_intrinsic, transition_intrinsic
 
     def get_subgoal_reached(self):
         agent_pos = self.env.agent_pos
@@ -205,11 +212,18 @@ class HierarchicalDDRQNAgent:
         if type(agent_pos) is not tuple:
             agent_pos = (agent_pos[0], agent_pos[1])
 
-        reward = 1 - 0.9 * (self.env.step_count / self.env.max_steps)
+        env_reward = 0
+        transition_reward = -1.0
+        if agent_pos == (self.goal_pos):
+            # This is for logging
+            env_reward = 1 - 0.9 * (self.env.step_count / self.env.max_steps)
 
-        # If the agent has reached the subgoal, provide a reward
+            # If the agent has reached the subgoal, provide a reward
+            # This is for storing in transitions
+            transition_reward = 1.0
+
         # return 1.0 if agent_pos == (self.meta_goals[goal] or self.goal_pos) else 0.0
-        return reward if agent_pos == (self.goal_pos) else 0.0
+        return env_reward, transition_reward
 
     def learn(self):
 
@@ -286,12 +300,12 @@ class HierarchicalDDRQNAgent:
                     state_next, reward, done, _ = self.env.step(action)
                     state_next = self.process_state(state_next)  # Add direction
 
-                    reward = self.extrinsic_reward()
-                    if reward > 0:
+                    reward, transition_reward = self.extrinsic_reward()
+                    if transition_reward > 0:
                         done = True
 
-                    r = self.intrinsic_reward(goal)  # intrinsic reward from subgoals
-                    intrinsic_done = r > 0  # If reward was not zero, a subgoal was reached
+                    r, transition_intrinsic = self.intrinsic_reward(goal)
+                    intrinsic_done = r > 0
                     intrinsic_reward_per_episode += r
 
                     # Save rewards per episode for metrics
@@ -299,11 +313,9 @@ class HierarchicalDDRQNAgent:
                     logger.extrinsic_reward_per_step.append(reward)
 
                     # Hindsight Action Transition - SubController
-                    transition_reward = 1 if r > 0 else -1
-
                     # Store transition
                     transition = np.reshape(
-                        np.array([state, action, transition_reward, state_next, self.norm_state(get_subview(self.env, self.meta_goals[goal])), intrinsic_done]),
+                        np.array([state, action, transition_intrinsic, state_next, self.norm_state(get_subview(self.env, self.meta_goals[goal])), intrinsic_done]),
                         newshape=(1, 6)
                     )
                     sub_episode_buffer.append(transition)
@@ -470,17 +482,17 @@ class HierarchicalDDRQNAgent:
 if __name__ == "__main__":
     PATH = "/Users/josesanchez/Documents/IAS/Thesis-Results"
 
+    env_name = 'MiniGrid-Empty-11x11'
+    goal_pos=(9,9)
+    env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=goal_pos, agent_pos=(1, 1))
+
+    sub_goals = [
+        (2, 2), (2, 5), (2, 8),
+        (5, 2), (5, 5), (5, 8),
+        (8, 2), (8, 5), (8, 8),
+    ]
+
     """
-        env_name = 'MiniGrid-Empty-11x11'
-        env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
-
-            sub_goals = [
-                (2, 2), (2, 5), (2, 8),
-                (5, 2), (5, 5), (5, 8),
-                (8, 2), (8, 5), (8, 8),
-            ]
-        """
-
     env_name = "StaticFourRooms-11x11"
     goal_pos = (8, 7)
     env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=goal_pos, grid_size=11, max_steps=400)
@@ -491,6 +503,7 @@ if __name__ == "__main__":
         (3, 7), (5, 7), (7, 7),
         (2, 8), (5, 8), (8, 8),
     ]
+    """
 
     """
     env_name = "ClosedFourRooms-11x11"

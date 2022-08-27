@@ -211,6 +211,10 @@ class HierarchicalDDRQNAgent:
         update_nn_steps = 0
         n_success = 0
 
+        global_goal = len(self.meta_goals) - 1
+        global_goal_state = get_subview(self.env, self.meta_goals[global_goal])
+        global_goal_state = self.norm_state(global_goal_state)
+
         logger = Logger()
 
         for episode in range(self.num_episodes):
@@ -232,10 +236,7 @@ class HierarchicalDDRQNAgent:
             self.h_model.init_hidden()
 
             # Start selecting the final goal
-            goal = len(self.meta_goals) - 1
-            goal_state = get_subview(self.env, self.meta_goals[goal])  # Obtain view of the subgoal
-            goal_state = self.norm_state(goal_state)
-            goal = self.choose_goal(state, goal_state)  # Get some goal to look for
+            goal = self.choose_goal(state, global_goal_state)  # Get some goal to look for
             self.goal_selected[self.meta_goals[goal]] += 1
 
             # self.env.place_obj(SubGoal(), top=goal, size=(1, 1))  # Place the new subgoal in the environment
@@ -345,7 +346,7 @@ class HierarchicalDDRQNAgent:
                     self.replay_buffer.add(sub_episode_buffer)
 
                 # Logg stuff for debugging
-                print(f'Intrinsic reward: {r}, Extrinsic_reward: {global_reward}, Current goal: {self.meta_goals[goal]}')
+                # print(f'Intrinsic reward: {r}, Extrinsic_reward: {global_reward}, Current goal: {self.meta_goals[goal]}')
 
                 # If the goal has not been achieved
                 if not done:
@@ -353,9 +354,9 @@ class HierarchicalDDRQNAgent:
                     # self.env.grid.set(*goal, None)
                     prev_goal = goal
 
-                    prev_goal_state = get_subview(self.env, self.meta_goals[prev_goal])
-                    prev_goal_state = self.norm_state(prev_goal_state)
-                    goal = self.choose_goal(state, prev_goal_state)  # Choose a new goal (returns index)
+                    # prev_goal_state = get_subview(self.env, self.meta_goals[prev_goal])
+                    # prev_goal_state = self.norm_state(prev_goal_state)
+                    goal = self.choose_goal(state, global_goal_state)  # Choose a new goal (returns index)
                     # self.epsilon[self.meta_goals[goal_idx]] = max(self.epsilon[self.meta_goals[goal_idx]] * self.epsilon_decay, 0.1)
                     self.update_goal_epsilon(goal)
                     self.goal_selected[self.meta_goals[goal]] += 1
@@ -363,7 +364,7 @@ class HierarchicalDDRQNAgent:
                     # Place the new subgoal in the environment
                     # self.env.grid.set(*goal, SubGoal())
                     self.place_subgoal(prev_goal, goal)
-                    print(f"Changed environment subgoal to {self.meta_goals[goal]}")
+                    # print(f"Changed environment subgoal to {self.meta_goals[goal]}")
 
             # self.epsilon_meta = max(self.epsilon_meta - self.meta_epsilon_decay, self.epsilon_min)
             self.epsilon_meta = self.meta_epsilon_scheduler.value(episode)
@@ -436,7 +437,7 @@ if __name__ == "__main__":
     # env = FullyObsWrapper(env)
     env = ImgObsWrapper(env)
 
-    agent = HierarchicalDDRQNAgent(env=env, num_episodes=1000, render=True, meta_goals=sub_goals, goal_pos=goal_pos)
+    agent = HierarchicalDDRQNAgent(env=env, num_episodes=1000, render=False, meta_goals=sub_goals, goal_pos=goal_pos)
     logger = agent.learn()
 
     logger.save(env_name, agent.identifier)

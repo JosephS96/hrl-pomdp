@@ -11,7 +11,6 @@ from common.schedules import LinearSchedule
 from common.utils import get_subview
 from envs import StaticFourRoomsEnv
 from envs.closed_four_rooms import ClosedFourRoomsEnv
-from envs.hdrqn_fourrooms import Fourrooms
 from networks.conv_dqn import ConvRecurrentDQN
 from replay_buffer import ExperienceEpisodeReplayBuffer
 import cv2 as cv2

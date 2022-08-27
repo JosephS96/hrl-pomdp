@@ -104,7 +104,7 @@ class DoubleDQNAgent:
                     self.model.update_params(batch_memory, self.gamma)
                     self.epsilon = self.schedule.value(episode)  # Anneal epsilon
 
-                if self.target_update_steps % update_nn_steps == 0:
+                if update_nn_steps % self.target_update_steps == 0:
                     self.model.update_target_network()
 
                 if done and (reward > 0):
@@ -143,15 +143,19 @@ if __name__ == "__main__":
     # env_name = 'MiniGrid-Empty-16x16-v0'
     #env = gym.make(env_name)
 
-    env_name = 'MiniGrid-Empty-11x11'
+    # env_name = 'MiniGrid-Empty-11x11'
     # env = StaticFourRoomsEnv(grid_size=13, max_steps=500)
-    env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
+    # env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
     # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
     # env = gym.make('MiniGrid-FourRooms-v0', agent_pos=(5, 5), goal_pos=(13, 13))
     # env = FullyObsWrapper(env)
+    env_name = "StaticFourRooms-11x11"
+    goal_pos = (8, 7)
+    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=goal_pos, grid_size=11, max_steps=400)
+
     env = ImgObsWrapper(env)
 
-    agent = DoubleDQNAgent(env=env, num_episodes=500, render=False)
+    agent = DoubleDQNAgent(env=env, num_episodes=1000, render=False)
     logger = agent.learn()
 
     logger.save(env_name, agent.identifier)
