@@ -11,6 +11,7 @@ from common.Logger import Logger
 from envs import StaticFourRoomsEnv
 from envs.closed_four_rooms import ClosedFourRoomsEnv
 from envs.randomempty import RandomEmpyEnv
+from envs.wtm import WTMEnv
 from replay_buffer import ExperienceEpisodeReplayBuffer
 from common.schedules import LinearSchedule
 from networks.hdqn import RecurrentDDQN, RecurrentDDQNPyTorch
@@ -399,26 +400,17 @@ class HierarchicalDDRQNAgent:
 
 if __name__ == "__main__":
     print(torch.initial_seed())
-
     """
     env_name = 'MiniGrid-Empty-11x11'
-    env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=(9, 9), agent_pos=(1, 1))
-    
-        sub_goals = [
-            (2, 2), (2, 5), (2, 8),
-            (5, 2), (5, 5), (5, 8),
-            (8, 2), (8, 5), (8, 8),
-        ]
-    """
+    goal_pos = (9, 9)
+    env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=goal_pos, agent_pos=(1, 1))
 
-    """
-    env_name = "StaticFourRooms-11x11"
-    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=(9, 9), grid_size=11, max_steps=400)
     sub_goals = [
         (2, 2), (2, 5), (2, 8),
-        (5, 2), (5, 8),
+        (5, 2), (5, 5), (5, 8),
         (8, 2), (8, 5), (8, 8),
     ]
+    """
     """
     env_name = "StaticFourRooms-11x11"
     goal_pos = (8, 7)
@@ -430,7 +422,20 @@ if __name__ == "__main__":
         (3, 7), (5, 7), (7, 7),
         (2, 8), (5, 8), (8, 8),
     ]
-
+    """
+    env_name = "WTM-14x15"
+    goal_pos = (11, 2)
+    env = WTMEnv(agent_pos=(7, 13), goal_pos=(11, 2), max_steps=600)
+    sub_goals = [
+        (2, 2), (5, 2), (9, 2), (12, 2),
+        (3, 3), (5, 3), (7, 3), (9, 3), (11, 3),
+        (7, 6),
+        (2, 7), (5, 7), (9, 7), (12, 7),
+        (3, 8), (5, 8), (9, 8), (11, 8),
+        (7, 9),
+        (3, 12), (5, 12), (7, 12), (9, 12), (11, 12),
+        (2, 13), (5, 13), (9, 13), (12, 13),
+    ]
 
     # env = gym.make(env_name)
     # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)

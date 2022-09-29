@@ -10,6 +10,7 @@ from common.Logger import Logger
 from envs import StaticFourRoomsEnv
 from envs.closed_four_rooms import ClosedFourRoomsEnv
 from envs.randomempty import RandomEmpyEnv
+from envs.wtm import WTMEnv
 from replay_buffer import ExperienceEpisodeReplayBuffer
 from common.schedules import LinearSchedule
 from networks.hdqn import RecurrentDDQNPyTorch
@@ -482,6 +483,7 @@ class HierarchicalDDRQNAgent:
 if __name__ == "__main__":
     PATH = "/Users/josesanchez/Documents/IAS/Thesis-Results"
 
+    """
     env_name = 'MiniGrid-Empty-11x11'
     goal_pos=(9,9)
     env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=goal_pos, agent_pos=(1, 1))
@@ -491,6 +493,7 @@ if __name__ == "__main__":
         (5, 2), (5, 5), (5, 8),
         (8, 2), (8, 5), (8, 8),
     ]
+    """
 
     """
     env_name = "StaticFourRooms-11x11"
@@ -504,10 +507,9 @@ if __name__ == "__main__":
         (2, 8), (5, 8), (8, 8),
     ]
     """
-
     """
     env_name = "ClosedFourRooms-11x11"
-    goal_pos = (8, 7)
+    goal_pos = (7, 2)
     env = ClosedFourRoomsEnv(agent_pos=(2, 2), goal_pos=goal_pos, grid_size=11, max_steps=400)
     sub_goals = [
         (2, 2), (8, 2),
@@ -517,10 +519,24 @@ if __name__ == "__main__":
         (2, 8), (5, 8), (8, 8)
     ]
     """
+    env_name = "WTM-14x15"
+    goal_pos = (11, 2)
+    env = WTMEnv(agent_pos=(7, 13), goal_pos=(11, 2), max_steps=1000)
+    sub_goals = [
+        (2, 2), (5, 2), (9, 2), (12, 2),
+        (3, 3), (5, 3), (7, 3), (9, 3), (11, 3),
+        (7, 6),
+        (2, 7), (5, 7), (9, 7), (12, 7),
+        (3, 8), (5, 8), (9, 8), (11, 8),
+        (7, 9),
+        (3, 12), (5, 12), (7, 12), (9, 12), (11, 12),
+        (2, 13), (5, 13), (9, 13), (12, 13),
+    ]
+
     # Only get the image as observation
     env = ImgObsWrapper(env)
 
-    agent = HierarchicalDDRQNAgent(env=env, num_episodes=1000, render=False, meta_goals=sub_goals, goal_pos=goal_pos)
+    agent = HierarchicalDDRQNAgent(env=env, num_episodes=2000, render=False, meta_goals=sub_goals, goal_pos=goal_pos)
     logger = agent.learn()
 
     logger.save(env_name, agent.identifier)

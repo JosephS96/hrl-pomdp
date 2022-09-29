@@ -6,6 +6,7 @@ import gym
 from gym_minigrid.wrappers import ImgObsWrapper, FullyObsWrapper
 
 from common.Logger import Logger
+from envs.wtm import WTMEnv
 from replay_buffer import ReplayBuffer
 from common.schedules import LinearSchedule
 from networks.dqn import DoubleDQN
@@ -34,6 +35,7 @@ class DoubleDQNAgent:
         self.epsilon = 1  # Exploration rate
         self.epsilon_min = 0.1
         self.schedule = LinearSchedule(num_episodes, self.epsilon_min)
+        self.update_steps = 5
 
         # Steps to give before updating target model nn
         self.target_update_steps = 2000
@@ -99,7 +101,7 @@ class DoubleDQNAgent:
                 prev_agent_pos = agent_pos
                 t += 1
 
-                if self.replay_buffer.__len__() > self.min_size_batch:
+                if self.replay_buffer.__len__() > self.min_size_batch and t % self.update_steps == 0:
                     batch_memory = self.replay_buffer.sample(self.batch_size)
                     self.model.update_params(batch_memory, self.gamma)
                     self.epsilon = self.schedule.value(episode)  # Anneal epsilon
@@ -149,9 +151,17 @@ if __name__ == "__main__":
     # env = gym.make('MiniGrid-Empty-8x8-v0', size=11)
     # env = gym.make('MiniGrid-FourRooms-v0', agent_pos=(5, 5), goal_pos=(13, 13))
     # env = FullyObsWrapper(env)
-    env_name = "StaticFourRooms-11x11"
-    goal_pos = (8, 7)
-    env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=goal_pos, grid_size=11, max_steps=400)
+    #env_name = "StaticFourRooms-11x11"
+    # goal_pos = (8, 7)
+    # env = StaticFourRoomsEnv(agent_pos=(2, 2), goal_pos=goal_pos, grid_size=11, max_steps=400)
+
+    # env_name = 'MiniGrid-Empty-11x11'
+    # goal_pos = (9, 9)
+    # env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=goal_pos, agent_pos=(1, 1))
+
+    env_name = "WTM-14x15"
+    goal_pos = (11, 2)
+    env = WTMEnv(agent_pos=(7, 13), goal_pos=(11, 2), max_steps=600)
 
     env = ImgObsWrapper(env)
 
