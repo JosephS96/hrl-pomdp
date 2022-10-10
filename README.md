@@ -25,7 +25,7 @@ are developed using PyTorch, while some complementary are in TensorFlow
 
 The algorithm was evaluated in three different environments with different complexities. For the environments
 [Gym-Minigrid](https://github.com/Farama-Foundation/Minigrid) was used on top of OpenAI Gym to handle the dynamics. 
-The specific environments can be found in the /envs folder. Concretely the tested environments are the following:
+The specific environments can be found in the ``/envs`` folder. Concretely the tested environments are the following:
  * RandomEmpyEnv
  * StaticFourRoomsEnv
  * WTM
@@ -65,7 +65,7 @@ the desired environment to test.
 
 DQN agent
 ```bash
-  python3 agents/double-dqn-agent.py
+  python3 agents/double_dqn_agent.py
 ```
 
 hDRQN agent
