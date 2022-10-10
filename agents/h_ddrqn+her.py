@@ -507,7 +507,7 @@ if __name__ == "__main__":
         (2, 8), (5, 8), (8, 8),
     ]
     """
-    """
+
     env_name = "ClosedFourRooms-11x11"
     goal_pos = (7, 2)
     env = ClosedFourRoomsEnv(agent_pos=(2, 2), goal_pos=goal_pos, grid_size=11, max_steps=400)
@@ -518,6 +518,7 @@ if __name__ == "__main__":
         (3, 7), (5, 7), (7, 7),
         (2, 8), (5, 8), (8, 8)
     ]
+
     """
     env_name = "WTM-14x15"
     goal_pos = (11, 2)
@@ -532,11 +533,11 @@ if __name__ == "__main__":
         (3, 12), (5, 12), (7, 12), (9, 12), (11, 12),
         (2, 13), (5, 13), (9, 13), (12, 13),
     ]
-
+    """
     # Only get the image as observation
     env = ImgObsWrapper(env)
 
-    agent = HierarchicalDDRQNAgent(env=env, num_episodes=2000, render=False, meta_goals=sub_goals, goal_pos=goal_pos)
+    agent = HierarchicalDDRQNAgent(env=env, num_episodes=1000, render=True, meta_goals=sub_goals, goal_pos=goal_pos)
     logger = agent.learn()
 
     logger.save(env_name, agent.identifier)

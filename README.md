@@ -21,6 +21,13 @@ This work makes use of the following concepts.
 The main neural network models 
 are developed using PyTorch, while some complementary are in TensorFlow
 
+## Environments
+
+The algorithm was evaluated in three different environments with different complexities. For the environments
+[Gym-Minigrid](https://github.com/Farama-Foundation/Minigrid) was used on top of OpenAI Gym to handle the dynamics.
+
+[Results]()
+
 ## ToDo
 
 The code in this repository is not final and is a work in progress. Although

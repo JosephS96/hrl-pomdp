@@ -360,7 +360,7 @@ class Conv_hDDRQNAgent:
                     print("Update target netowrk!")
                     self.sub_controller.update_target_network()
 
-                if self.meta_target_update_steps % update_nn_steps == 0:
+                if update_nn_steps % self.meta_target_update_steps == 0:
                     self.meta_controller.update_target_network()
 
                 # Corresponds to a list of at least n transitions
@@ -434,7 +434,7 @@ if __name__ == "__main__":
     # env = RGBImgObsWrapper(env) # Fully Observable
     env = ImgObsWrapper(env)
 
-    agent = Conv_hDDRQNAgent(env=env, num_episodes=500, render=False, meta_goals=sub_goals, goal_pos=goal_pos)
+    agent = Conv_hDDRQNAgent(env=env, num_episodes=1000, render=False, meta_goals=sub_goals, goal_pos=goal_pos)
     logger = agent.learn()
 
     logger.save(env_name, agent.identifier)

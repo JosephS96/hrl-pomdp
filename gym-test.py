@@ -5,6 +5,8 @@ import gym_minigrid
 import matplotlib.pyplot as plt
 from gym_minigrid.minigrid import SubGoal, Grid
 from gym_minigrid.wrappers import *
+
+from envs.closed_four_rooms import ClosedFourRoomsEnv
 from envs.staticfourrooms import StaticFourRoomsEnv
 from envs.randomempty import RandomEmpyEnv
 from envs.apartment import Apartment
@@ -118,22 +120,15 @@ def to_relative_pos(agent_pos, topX, topY, size):
 
 if __name__ == "__main__":
 
-    # env = gym.make('MiniGrid-SimpleCrossingS9N1-v0')
-    # env = gym.make('MiniGrid-Empty-16x16-v0')
-    env_name = 'MiniGrid-Empty-11x11'
-    goal_pos = (9, 9)
-    # env = RandomEmpyEnv(grid_size=11, max_steps=400, goal_pos=goal_pos, agent_pos=(1, 1))
-    env = WTMEnv(agent_pos=(7, 13), goal_pos=(11, 2), max_steps=30)
-
+    env_name = "ClosedFourRooms-11x11"
+    goal_pos = (7, 2)
+    env = ClosedFourRoomsEnv(agent_pos=(2, 2), goal_pos=goal_pos, grid_size=11, max_steps=400)
     sub_goals = [
-        (2, 2), (5, 2), (9, 2), (12, 2),
-        (3, 3), (5, 3), (7, 3), (9, 3), (11, 3),
-        (7, 6),
-        (2, 7), (5, 7), (9, 7), (12, 7),
-        (3, 8), (5, 8), (9, 8), (11, 8),
-        (7, 9),
-        (3, 12), (5, 12), (7, 12), (9, 12), (11, 12),
-        (2, 13), (5, 13), (9, 13), (12, 13),
+         (8, 2),
+        (3, 3), (7, 3),
+        (2, 5), (3, 5), (7, 5), (8, 5),
+        (3, 7), (5, 7), (7, 7),
+        (2, 8), (5, 8), (8, 8)
     ]
 
     env = ImgObsWrapper(env)
