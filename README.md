@@ -24,9 +24,60 @@ are developed using PyTorch, while some complementary are in TensorFlow
 ## Environments
 
 The algorithm was evaluated in three different environments with different complexities. For the environments
-[Gym-Minigrid](https://github.com/Farama-Foundation/Minigrid) was used on top of OpenAI Gym to handle the dynamics.
+[Gym-Minigrid](https://github.com/Farama-Foundation/Minigrid) was used on top of OpenAI Gym to handle the dynamics. 
+The specific environments can be found in the /envs folder. Concretely the tested environments are the following:
+ * RandomEmpyEnv
+ * StaticFourRoomsEnv
+ * WTM
 
-[Results]()
+Example of environment for partial observability with the results showing the average reward obtained during training.
+
+![Four Rooms Environment](https://github.com/JosephS96/hrl-pomdp/blob/main/images/fourrooms-env.png)
+
+![Reward obtained for Four Rooms Environment](https://github.com/JosephS96/hrl-pomdp/blob/main/images/extrinsic_fourrooms.png)
+
+## Installing
+This project uses mostly standard libraries like PyTorch, Numpy, etc. For a complete set up, use the 
+`requirements.txt`.
+
+```bash
+  pip install -r requirements.txt
+```
+
+The main libraries required for the experiments to function are the follwoing:
+* PyTorch
+* TensorFlow (to be removed later)
+* Gym-Minigrid
+* Numpy
+
+Lastly, replace the ``minigrid.py`` file inside your local Gym-Minigrid installation environment with 
+the one provided in the root folder of this repository. The new file contains the source code for the
+SubGoals objects and is needed to work properly. In the future this will be changed so that
+there is no need to override the original package.
+
+
+## How to Run the experiments
+
+Unfortunately there are no command line arguments for the environments or the agents. In order
+to modify any of the parameters the file need to be directly edited. Each agent already has commented
+the environments and the setting for them in their files, so it is only a matter of uncommenting
+the desired environment to test.
+
+DQN agent
+```bash
+  python3 agents/double-dqn-agent.py
+```
+
+hDRQN agent
+```bash
+  python3 agents/h_ddrqn.py
+```
+
+hDRQN+HER agent
+```bash
+  python3 agents/h_ddrqn+her.py
+```
+
 
 ## ToDo
 
